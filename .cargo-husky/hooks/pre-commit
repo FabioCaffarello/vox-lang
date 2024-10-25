@@ -21,5 +21,6 @@ echo "Running pre-commit checks with cargo-husky..."
 #   echo "Tests failed. Fix the tests before committing."
 #   exit 1
 # fi
+make lint
 
 echo "All pre-commit checks passed."
