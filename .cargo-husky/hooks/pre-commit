@@ -2,24 +2,12 @@
 echo "Running pre-commit checks with cargo-husky..."
 
 # Format check
-cargo fmt -- --check
-if [ $? -ne 0 ]; then
-  echo "Formatting check failed. Run 'cargo fmt' to format your code."
-  exit 1
-fi
+make format
 
 # Lint check
-cargo clippy --all-targets --all-features -- -D warnings
-if [ $? -ne 0 ]; then
-  echo "Linting failed. Please address Clippy warnings."
-  exit 1
-fi
+make lint
 
 # Run tests
-cargo test --all
-if [ $? -ne 0 ]; then
-  echo "Tests failed. Fix the tests before committing."
-  exit 1
-fi
+make test
 
 echo "All pre-commit checks passed."
