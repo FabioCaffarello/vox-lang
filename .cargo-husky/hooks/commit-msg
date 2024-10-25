@@ -1,0 +1,18 @@
+#!/bin/sh
+echo "Validating commit message..."
+
+# Define the regex for the conventional commit format
+commit_regex="^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|skip)(\(.+\))?: .{1,50}"
+
+# Read the commit message
+commit_msg=$(cat "$1")
+
+# Check if the commit message matches the regex
+if ! echo "$commit_msg" | grep -Eq "$commit_regex"; then
+  echo "ERROR: Commit message does not follow the conventional format!"
+  echo "Format should be: <type>(<scope>): <short description>"
+  echo "Example: feat(parser): add support for new syntax"
+  exit 1
+fi
+
+echo "Commit message is valid."
