@@ -17,6 +17,10 @@ format:
 	@echo "Formatting all projects with cargo fmt"
 	cargo fmt --all
 
+build:
+	@echo "Building all projects with cargo build"
+	cargo build --all --verbose
+
 # Lint all Rust code with Clippy
 lint:
 	@echo "Linting all projects with Clippy"

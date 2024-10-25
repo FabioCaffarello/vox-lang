@@ -1,6 +1,9 @@
 #!/bin/sh
 echo "Running pre-commit checks with cargo-husky..."
 
+# Build
+make build
+
 # Format check
 make format
 
