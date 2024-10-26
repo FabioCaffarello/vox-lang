@@ -34,7 +34,8 @@
                 "tamasfe.even-better-toml",
                 "usernamehw.errorlens",
                 "dustypomerleau.rust-syntax",
-                "rust-lang.rust-analyzer"
+                "rust-lang.rust-analyzer",
+                "streetsidesoftware.code-spell-checker"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "zsh",
