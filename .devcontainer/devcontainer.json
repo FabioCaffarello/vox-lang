@@ -1,0 +1,45 @@
+{
+    "name": "labdata-tcc",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "VARIANT": "ubuntu-22.04"
+        }
+    },
+    "remoteUser": "vscode",
+    "postCreateCommand": "/bin/bash ./.devcontainer/postCreateCommand.sh",
+    "features": {
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers-contrib/features/zsh-plugins:0": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+    "forwardPorts": [],
+    "mounts": [
+        "source=${env:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "esbenp.prettier-vscode",
+                "eamodio.gitlens",
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "ms-azuretools.vscode-docker",
+                "technosophos.vscode-make",
+                "ms-vscode.makefile-tools",
+                "shd101wyy.markdown-preview-enhanced",
+                "Gruntfuggly.todo-tree",
+                "vadimcn.vscode-lldb",
+                "fill-labs.dependi",
+                "tamasfe.even-better-toml",
+                "usernamehw.errorlens",
+                "dustypomerleau.rust-syntax",
+                "rust-lang.rust-analyzer"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                "workbench.colorTheme": "Default Dark+"
+            }
+        }
+    }
+}

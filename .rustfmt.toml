@@ -1,0 +1,4 @@
+max_width = 100
+hard_tabs = false
+edition = "2021"
+comment_width = 80
