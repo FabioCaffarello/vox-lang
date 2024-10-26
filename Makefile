@@ -32,6 +32,10 @@ test:
 	@echo "Running tests with cargo test"
 	cargo test --all
 
+coverage:
+	@echo "Running tests with coverage using cargo tarpaulin"
+	cargo tarpaulin --locked --all-features --out Lcov
+
 # Run all steps: format, lint, and test
 all: format lint test
 	@echo "Completed format, lint, and test steps"

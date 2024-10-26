@@ -1,16 +1,10 @@
 #!/bin/sh
 echo "Running pre-commit checks with cargo-husky..."
 
-# Build
+# Run build, format, lint, and test steps
 make build
-
-# Format check
 make format
-
-# Lint check
 make lint
-
-# Run tests
 make test
 
 echo "All pre-commit checks passed."

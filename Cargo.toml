@@ -12,4 +12,4 @@ edition = "2021"
 [dev-dependencies.cargo-husky]
 version = "1"
 default-features = false
-features = ["user-hooks"]
+# features = ["user-hooks"]
