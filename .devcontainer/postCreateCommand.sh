@@ -11,9 +11,18 @@ else
     echo "Rust is already installed."
 fi
 
-# Ensure necessary Rust components are installed
+# Install nightly toolchain if not installed
+if ! rustup show | grep -q 'nightly'; then
+    echo "Installing Rust nightly toolchain..."
+    rustup install nightly
+else
+    echo "Rust nightly toolchain is already installed."
+fi
+
+# Ensure necessary Rust components are installed for both stable and nightly
 echo "Installing required Rust components..."
 rustup component add rustfmt clippy
+rustup component add rustfmt clippy --toolchain nightly
 
 # Install cargo-tarpaulin for coverage reporting
 if ! command -v cargo-tarpaulin &> /dev/null; then

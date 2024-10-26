@@ -1,15 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/lexer",
+    ".",
+]
+
 [package]
 name = "vox-lang"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-# miette = { version = "7.2.0", features = ["fancy"] }
-# bytes = "1.3.0"
-# clap = { version = "4.5.16", features = ["derive"] }
-# thiserror = "1.0.63"
+[[bin]]
+name = "vox-lang"
+path = "src/main.rs"
 
-[dev-dependencies.cargo-husky]
-version = "1"
-default-features = false
-# features = ["user-hooks"]
+[dependencies]
+lexer = { path = "crates/lexer" }
+miette = { version = "7.2.0", features = ["fancy"] }
+bytes = "1.3.0"
+clap = { version = "4.5.16", features = ["derive"] }
+thiserror = "1.0.63"
+
+[dev-dependencies]
+cargo-husky = { version = "1", default-features = false }
