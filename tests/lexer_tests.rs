@@ -283,10 +283,13 @@ Need to skip the entire block*/
 #[test]
 fn test_unrecognized_characters() {
     let input = "@ # $ ^ &";
-    let mut lexer = Lexer::new(input);
+    let lexer = Lexer::new(input);
 
-    while let Some(result) = lexer.next() {
-        assert!(result.is_err(), "Expected an error for unrecognized characters");
+    for result in lexer {
+        assert!(
+            result.is_err(),
+            "Expected an error for unrecognized characters"
+        );
     }
 }
 
@@ -319,8 +322,14 @@ fn test_strings_with_escapes() {
         let token = token_result.unwrap();
         assert!(token.is_ok(), "Expected Ok(Token) but got Err");
         let token = token.unwrap();
-        assert_eq!(token.kind, expected.kind, "Token kind does not match expected kind");
-        assert_eq!(token.origin, expected.origin, "Token origin does not match expected origin");
+        assert_eq!(
+            token.kind, expected.kind,
+            "Token kind does not match expected kind"
+        );
+        assert_eq!(
+            token.origin, expected.origin,
+            "Token origin does not match expected origin"
+        );
     }
 }
 
@@ -347,7 +356,10 @@ fn test_adjacent_operators_and_punctuation() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(lexer.next().is_none(), "Lexer should return None after all tokens are consumed");
+    assert!(
+        lexer.next().is_none(),
+        "Lexer should return None after all tokens are consumed"
+    );
 }
 
 #[test]
@@ -369,7 +381,10 @@ fn test_identifiers_with_keywords() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(lexer.next().is_none(), "Lexer should return None after all tokens are consumed");
+    assert!(
+        lexer.next().is_none(),
+        "Lexer should return None after all tokens are consumed"
+    );
 }
 
 #[test]
@@ -402,5 +417,8 @@ fn test_complex_nested_expressions() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(lexer.next().is_none(), "Lexer should return None after all tokens are consumed");
+    assert!(
+        lexer.next().is_none(),
+        "Lexer should return None after all tokens are consumed"
+    );
 }

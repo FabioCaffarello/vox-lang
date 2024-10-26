@@ -15,7 +15,7 @@ rust-version:
 # Format all Rust code in the project
 format:
 	@echo "Formatting all projects with cargo fmt"
-	cargo fmt --all
+	rustup run nightly cargo fmt --all
 
 build:
 	@echo "Building all projects with cargo build"

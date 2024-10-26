@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
+use lexer::Lexer;
 use miette::{IntoDiagnostic, WrapErr};
 use std::fs;
 use std::path::PathBuf;
-use lexer::Lexer;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -31,8 +31,7 @@ fn main() -> miette::Result<()> {
                     Ok(t) => t,
                     Err(e) => {
                         eprintln!("{e:?}");
-                        if let Some(unrecognized) = e.downcast_ref::<lexer::SingleTokenError>()
-                        {
+                        if let Some(unrecognized) = e.downcast_ref::<lexer::SingleTokenError>() {
                             any_cc_err = true;
                             eprintln!(
                                 "[line {}] Error: Unexpected character: {}",

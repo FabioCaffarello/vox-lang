@@ -3,37 +3,79 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenKind {
     // Punctuators and Delimiters
-    LParen, RParen, LBrace, RBrace, LBracket, RBracket,
-    Comma, Colon, SemiColon, Dot,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    LBracket,
+    RBracket,
+    Comma,
+    Colon,
+    SemiColon,
+    Dot,
 
     // Keywords
-    If, Else, While, For, Return, Fun,
-    True, False, Nil,
-    String, Number(f64), Array, Dict,
-    And, Or, Not, In,
+    If,
+    Else,
+    While,
+    For,
+    Return,
+    Fun,
+    True,
+    False,
+    Nil,
+    String,
+    Number(f64),
+    Array,
+    Dict,
+    And,
+    Or,
+    Not,
+    In,
 
     // Text Processing Keywords
-    Split, Join, Map, Filter, Reduce, Replace, Extract,
+    Split,
+    Join,
+    Map,
+    Filter,
+    Reduce,
+    Replace,
+    Extract,
 
     // Literals
     Ident,
 
     // Built-in Functions
-    Length, TypeOf, 
+    Length,
+    TypeOf,
     // ToNumber, ToString,
     // UpperCase, LowerCase, Trim, Contains, Substring, IndexOf,
 
     // Special Symbols
-    Pipeline, Range, Concatenate,
+    Pipeline,
+    Range,
+    Concatenate,
 
     // Arithmetic Operators
-    Plus, Minus, Star, Slash, Percent,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
 
     // Comparison Operators
-    Equal, Bang, BangEqual, EqualEqual, Greater, GreaterEqual, Less, LessEqual,
+    Equal,
+    Bang,
+    BangEqual,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
 
     // Comments
-    LineComment, BlockComment,
+    LineComment,
+    BlockComment,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

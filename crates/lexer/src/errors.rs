@@ -1,7 +1,6 @@
 use miette::{Diagnostic, SourceSpan};
 use thiserror::Error;
 
-
 #[derive(Diagnostic, Debug, Error)]
 #[error("Unexpected token '{token}'")]
 pub struct SingleTokenError {

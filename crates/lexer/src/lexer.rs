@@ -5,7 +5,7 @@ use miette::{Error, LabeledSpan, SourceSpan};
 pub struct Lexer<'de> {
     whole: &'de str,
     rest: &'de str,
-    c_onwards : &'de str,
+    c_onwards: &'de str,
     byte: usize,
     peeked: Option<Result<Token<'de>, miette::Error>>,
 }
@@ -21,7 +21,12 @@ impl<'de> Lexer<'de> {
         }
     }
 
-    fn just(&self, kind: TokenKind, offset: usize, origin: &'de str) -> Option<Result<Token<'de>, miette::Error>> {
+    fn just(
+        &self,
+        kind: TokenKind,
+        offset: usize,
+        origin: &'de str,
+    ) -> Option<Result<Token<'de>, miette::Error>> {
         Some(Ok(Token {
             kind,
             offset,
@@ -29,7 +34,12 @@ impl<'de> Lexer<'de> {
         }))
     }
 
-    fn match_punctuator(&self, c: char, offset: usize, origin: &'de str) -> Option<Result<Token<'de>, miette::Error>> {
+    fn match_punctuator(
+        &self,
+        c: char,
+        offset: usize,
+        origin: &'de str,
+    ) -> Option<Result<Token<'de>, miette::Error>> {
         match c {
             '(' => self.just(TokenKind::LParen, offset, origin),
             ')' => self.just(TokenKind::RParen, offset, origin),
@@ -45,7 +55,12 @@ impl<'de> Lexer<'de> {
         }
     }
 
-    fn match_arithmetic(&mut self, c: char, offset: usize, origin: &'de str) -> Option<Result<Token<'de>, miette::Error>> {
+    fn match_arithmetic(
+        &mut self,
+        c: char,
+        offset: usize,
+        origin: &'de str,
+    ) -> Option<Result<Token<'de>, miette::Error>> {
         match c {
             '+' => self.just(TokenKind::Plus, offset, origin),
             '-' => self.just(TokenKind::Minus, offset, origin),
@@ -56,12 +71,12 @@ impl<'de> Lexer<'de> {
                 let full_origin = &self.whole[offset..offset + 2];
                 if self.rest.starts_with('/') {
                     self.skip_singleline_comment();
-                   return  self.just(TokenKind::LineComment, offset, full_origin)
+                    return self.just(TokenKind::LineComment, offset, full_origin);
                 } else if self.rest.starts_with('*') {
                     self.skip_multiline_comment();
-                    return self.just(TokenKind::BlockComment, offset, full_origin)
+                    return self.just(TokenKind::BlockComment, offset, full_origin);
                 } else {
-                    return self.just(TokenKind::Slash, offset, origin) // Otherwise, it's division
+                    return self.just(TokenKind::Slash, offset, origin); // Otherwise, it's division
                 }
             }
             _ => None,
@@ -109,9 +124,9 @@ impl<'de> Lexer<'de> {
             let span: &str = &self.c_onwards[..c.len_utf8() + trimmed + 1];
             self.rest = &self.rest[1..];
             self.byte += 1;
-            return self.just(double_kind, offset, span)
+            return self.just(double_kind, offset, span);
         } else {
-            return self.just(single_kind, offset, origin)
+            return self.just(single_kind, offset, origin);
         }
     }
 
@@ -122,24 +137,48 @@ impl<'de> Lexer<'de> {
         origin: &'de str,
     ) -> Option<Result<Token<'de>, miette::Error>> {
         match c {
-            '=' => self.match_comparison_token(c, TokenKind::Equal, TokenKind::EqualEqual, offset, origin),
-            '!' => self.match_comparison_token(c, TokenKind::Bang, TokenKind::BangEqual, offset, origin),
-            '<' => self.match_comparison_token(c, TokenKind::Less, TokenKind::LessEqual, offset, origin),
-            '>' => self.match_comparison_token(c, TokenKind::Greater, TokenKind::GreaterEqual, offset, origin),
+            '=' => self.match_comparison_token(
+                c,
+                TokenKind::Equal,
+                TokenKind::EqualEqual,
+                offset,
+                origin,
+            ),
+            '!' => self.match_comparison_token(
+                c,
+                TokenKind::Bang,
+                TokenKind::BangEqual,
+                offset,
+                origin,
+            ),
+            '<' => self.match_comparison_token(
+                c,
+                TokenKind::Less,
+                TokenKind::LessEqual,
+                offset,
+                origin,
+            ),
+            '>' => self.match_comparison_token(
+                c,
+                TokenKind::Greater,
+                TokenKind::GreaterEqual,
+                offset,
+                origin,
+            ),
             _ => None,
         }
     }
 
     fn match_identifier_keyword(
-        &mut self, 
-        c: char, 
+        &mut self,
+        c: char,
         offset: usize,
     ) -> Option<Result<Token<'de>, miette::Error>> {
         match c {
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut literal = c.to_string();
                 let start_offset = self.byte - c.len_utf8();
-    
+
                 while let Some(next_char) = self.rest.chars().next() {
                     if next_char.is_alphanumeric() || next_char == '_' {
                         literal.push(next_char);
@@ -149,7 +188,7 @@ impl<'de> Lexer<'de> {
                         break;
                     }
                 }
-    
+
                 // Determine TokenKind based on identifier
                 let kind = match literal.as_str() {
                     "if" => TokenKind::If,
@@ -178,7 +217,7 @@ impl<'de> Lexer<'de> {
                     "concat" => TokenKind::Concatenate,
                     _ => TokenKind::Ident,
                 };
-    
+
                 // Correct offset handling for `full_origin`
                 let end_offset = self.byte;
                 let full_origin = &self.whole[start_offset..end_offset];
@@ -187,20 +226,19 @@ impl<'de> Lexer<'de> {
             _ => None,
         }
     }
-    
 
     fn match_string(
-        &mut self, 
-        c: char, 
+        &mut self,
+        c: char,
         offset: usize,
     ) -> Option<Result<Token<'de>, miette::Error>> {
         if c == '"' {
             let mut literal = String::from("\""); // Start with the opening quote
             let mut escaped = false;
-    
+
             for (i, ch) in self.rest.chars().enumerate() {
                 literal.push(ch);
-    
+
                 if escaped {
                     escaped = false;
                 } else if ch == '\\' {
@@ -216,7 +254,7 @@ impl<'de> Lexer<'de> {
                     }));
                 }
             }
-    
+
             // If we exit the loop without finding a closing quote, it’s an unterminated string error
             let err = StringTerminationError {
                 src: self.whole.to_string(),
@@ -229,84 +267,54 @@ impl<'de> Lexer<'de> {
             None
         }
     }
-    
-    // fn match_string(
-    //     &mut self, 
-    //     c: char, 
-    //     offset: usize,
-    // ) -> Option<Result<Token<'de>, miette::Error>> {
-    //     if c == '"' {
-    //         if let Some(end) = self.rest.find('"') {
-    //             // Found a closing quote; capture the string
-    //             let literal = &self.c_onwards[..end + 2]; // include both quotes
-    //             self.byte += end + 2;  // Account for the closing quote
-    //             self.rest = &self.rest[end + 1..];
-    //             Some(Ok(Token {
-    //                 origin: literal,
-    //                 offset,
-    //                 kind: TokenKind::String,
-    //             }))
-    //         } else {
-    //             // No closing quote; return an unterminated string error
-    //             let err = StringTerminationError {
-    //                 src: self.whole.to_string(),
-    //                 err_span: SourceSpan::from(self.byte..self.whole.len()), // adjusted span
-    //             };
-    //             self.byte += self.rest.len(); // Consume the rest as unterminated
-    //             self.rest = "";
-    //             Some(Err(err.into()))
-    //         }
-    //     } else {
-    //         None
-    //     }
-    // }    
 
     fn match_number(
-        &mut self, 
-        c: char, 
+        &mut self,
+        c: char,
         offset: usize,
     ) -> Option<Result<Token<'de>, miette::Error>> {
         match c {
             '0'..='9' => {
-                let first_non_digit = self.c_onwards
-                        .find(|c| !matches!(c, '.' | '0'..='9'))
-                        .unwrap_or_else(|| self.c_onwards.len());
+                let first_non_digit = self
+                    .c_onwards
+                    .find(|c| !matches!(c, '.' | '0'..='9'))
+                    .unwrap_or(self.c_onwards.len());
 
                 let mut literal = &self.c_onwards[..first_non_digit];
                 let mut dotted = literal.splitn(3, '.');
 
                 match (dotted.next(), dotted.next(), dotted.next()) {
-                        (Some(one), Some(two), Some(_)) => {
-                            literal = &literal[..one.len() + 1 + two.len()];
-                        }
-                        (Some(one), Some(two), None) if two.is_empty() => {
-                            literal = &literal[..one.len()];
-                        }
-                        _ => {
-                            // leave literal as-is
-                        }
+                    (Some(one), Some(two), Some(_)) => {
+                        literal = &literal[..one.len() + 1 + two.len()];
                     }
-                    let extra_bytes = literal.len() - c.len_utf8();
-                    self.byte += extra_bytes;
-                    self.rest = &self.rest[extra_bytes..];
+                    (Some(one), Some(""), None) => {
+                        literal = &literal[..one.len()];
+                    }
+                    _ => {
+                        // leave literal as-is
+                    }
+                }
+                let extra_bytes = literal.len() - c.len_utf8();
+                self.byte += extra_bytes;
+                self.rest = &self.rest[extra_bytes..];
 
-                    let n = match literal.parse() {
-                        Ok(n) => n,
-                        Err(e) => {
-                            return Some(Err(miette::miette! {
+                let n = match literal.parse() {
+                    Ok(n) => n,
+                    Err(e) => {
+                        return Some(Err(miette::miette! {
                                 labels = vec![
                                     LabeledSpan::at(self.byte - literal.len()..self.byte, "this numeric literal"),
                                 ],
                                 "{e}",
                             }.with_source_code(self.whole.to_string())));
-                        }
-                    };
+                    }
+                };
 
-                    return Some(Ok(Token {
-                        origin: literal,
-                        offset,
-                        kind: TokenKind::Number(n),
-                    }))
+                Some(Ok(Token {
+                    origin: literal,
+                    offset,
+                    kind: TokenKind::Number(n),
+                }))
             }
             _ => None,
         }
@@ -332,12 +340,12 @@ impl<'de> Iterator for Lexer<'de> {
 
             // Match punctuators and delimiters
             if let Some(kind) = self.match_punctuator(c, c_at, c_str) {
-                return Some(kind)
+                return Some(kind);
             }
 
             // Match arithmetic operators, handling comments or division
             if let Some(kind) = self.match_arithmetic(c, c_at, c_str) {
-                return Some(kind)
+                return Some(kind);
             }
 
             if let Some(kind) = self.match_comparison(c, c_at, c_str) {
