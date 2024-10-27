@@ -14,6 +14,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Tokenize { filename: PathBuf },
+    Parse { filename: PathBuf },
 }
 
 fn main() -> miette::Result<()> {
@@ -54,6 +55,8 @@ fn main() -> miette::Result<()> {
             if any_cc_err {
                 std::process::exit(65);
             }
+        }
+        Commands::Parse { filename } => {
         }
     }
     Ok(())
