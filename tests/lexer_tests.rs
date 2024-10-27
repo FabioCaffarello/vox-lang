@@ -101,7 +101,7 @@ fn test_identifiers_and_keywords() {
         create_token("or", 35, TokenKind::Or),
         create_token("true", 38, TokenKind::True),
         create_token("false", 43, TokenKind::False),
-        create_token("if", 48, TokenKind::If),
+        create_token("if", 49, TokenKind::If),
     ];
 
     for expected in expected_tokens {

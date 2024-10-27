@@ -277,6 +277,7 @@ impl<'de> Lexer<'de> {
         }
     }
 
+    #[allow(clippy::while_let_on_iterator)]
     fn match_number(
         &mut self,
         c: char,
