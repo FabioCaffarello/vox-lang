@@ -1,8 +1,5 @@
-// tests/lexer_tests.rs
-
+use lexer::errors::{SingleTokenError, StringTerminationError};
 use lexer::{Lexer, Token, TokenKind};
-
-// Removed unused import: use miette::Error;
 
 // Helper function to create tokens
 fn create_token(origin: &str, offset: usize, kind: TokenKind) -> Token {
@@ -10,6 +7,41 @@ fn create_token(origin: &str, offset: usize, kind: TokenKind) -> Token {
         origin,
         offset,
         kind,
+    }
+}
+
+#[test]
+fn test_single_token_error() {
+    let input = "@";
+    let mut lexer = Lexer::new(input);
+
+    let token_result = lexer.next();
+    assert!(token_result.is_some(), "Expected an error but got None");
+    let error = token_result.unwrap().unwrap_err();
+
+    // Assert that the error is of type SingleTokenError
+    if let Some(single_token_error) = error.downcast_ref::<SingleTokenError>() {
+        assert_eq!(single_token_error.token, '@');
+        assert_eq!(single_token_error.line(), 1);
+    } else {
+        panic!("Expected SingleTokenError, got {}", error);
+    }
+}
+
+#[test]
+fn test_string_termination_error() {
+    let input = r#""unterminated string"#;
+    let mut lexer = Lexer::new(input);
+
+    let token_result = lexer.next();
+    assert!(token_result.is_some(), "Expected an error but got None");
+    let error = token_result.unwrap().unwrap_err();
+
+    // Assert that the error is of type StringTerminationError
+    if let Some(string_error) = error.downcast_ref::<StringTerminationError>() {
+        assert_eq!(string_error.line(), 1);
+    } else {
+        panic!("Expected StringTerminationError, got {}", error);
     }
 }
 
@@ -57,7 +89,7 @@ fn test_punctuators() {
 
 #[test]
 fn test_identifiers_and_keywords() {
-    let input = "and nil variable_1 _private var123 or true false";
+    let input = "and nil variable_1 _private var123 or true false if";
     let mut lexer = Lexer::new(input);
 
     let expected_tokens = vec![
@@ -69,6 +101,7 @@ fn test_identifiers_and_keywords() {
         create_token("or", 35, TokenKind::Or),
         create_token("true", 38, TokenKind::True),
         create_token("false", 43, TokenKind::False),
+        create_token("if", 48, TokenKind::If),
     ];
 
     for expected in expected_tokens {
@@ -84,6 +117,96 @@ fn test_identifiers_and_keywords() {
         lexer.next().is_none(),
         "Lexer should return None after all tokens are consumed"
     );
+}
+
+#[test]
+fn test_comparison_operators() {
+    let input = "! >= == = != < <= >";
+    let mut lexer = Lexer::new(input);
+
+    let expected_tokens = vec![
+        create_token("!", 0, TokenKind::Bang),
+        create_token(">=", 2, TokenKind::GreaterEqual),
+        create_token("==", 5, TokenKind::EqualEqual),
+        create_token("=", 8, TokenKind::Equal),
+        create_token("!=", 10, TokenKind::BangEqual),
+        create_token("<", 13, TokenKind::Less),
+        create_token("<=", 15, TokenKind::LessEqual),
+        create_token(">", 18, TokenKind::Greater),
+    ];
+
+    for expected in expected_tokens {
+        let token_result = lexer.next();
+        assert!(token_result.is_some(), "Expected a token but got None");
+        let token = token_result.unwrap().unwrap();
+        assert_eq!(token, expected, "Token does not match expected value");
+    }
+}
+
+#[test]
+fn test_valid_numbers() {
+    let inputs = ["123", "456.789", "0.001", "42.0"];
+    for input in &inputs {
+        let mut lexer = Lexer::new(input);
+        let token_result = lexer.next();
+        assert!(token_result.is_some(), "Expected a token but got None");
+        let token = token_result.unwrap().unwrap();
+        assert_eq!(token.kind, TokenKind::Number(input.parse::<f64>().unwrap()));
+    }
+}
+
+#[test]
+fn test_number_parsing_error() {
+    let input = "123abc";
+    let mut lexer = Lexer::new(input);
+
+    let token_result = lexer.next();
+    assert!(token_result.is_some(), "Expected an error but got None");
+    let error = token_result.unwrap().unwrap_err();
+
+    let error_message = format!("{}", error);
+    assert!(
+        error_message.contains("Invalid number literal"),
+        "Expected a number parsing error"
+    );
+}
+
+#[test]
+fn test_invalid_numbers() {
+    let inputs = ["100_000", "1..2", "1.2.3"];
+    for input in &inputs {
+        let mut lexer = Lexer::new(input);
+        let token_result = lexer.next();
+        assert!(token_result.is_some(), "Expected an error but got None");
+        let error = token_result.unwrap().unwrap_err();
+        let error_message = format!("{}", error);
+        assert!(
+            error_message.contains("Invalid number literal"),
+            "Expected a number parsing error for input '{}'",
+            input
+        );
+    }
+}
+
+#[test]
+fn test_multiline_string_error() {
+    let input = r#""This is a
+            multi-line string""#;
+    let mut lexer = Lexer::new(input);
+
+    let token_result = lexer.next();
+    assert!(token_result.is_some(), "Expected an error but got None");
+    let error = token_result.unwrap().unwrap_err();
+
+    // Assert that the error is of type StringTerminationError
+    if let Some(string_error) = error.downcast_ref::<StringTerminationError>() {
+        assert!(
+            string_error.to_string().contains("Unterminated string"),
+            "Error message does not contain 'Unterminated string'"
+        );
+    } else {
+        panic!("Expected StringTerminationError, got {}", error);
+    }
 }
 
 #[test]
@@ -421,4 +544,75 @@ fn test_complex_nested_expressions() {
         lexer.next().is_none(),
         "Lexer should return None after all tokens are consumed"
     );
+}
+
+#[test]
+fn test_token_display() {
+    let test_cases = vec![
+        // Punctuators and Delimiters
+        (TokenKind::LParen, "(", "LEFT_PAREN ( null"),
+        (TokenKind::RParen, ")", "RIGHT_PAREN ) null"),
+        (TokenKind::LBrace, "{", "LEFT_BRACE { null"),
+        (TokenKind::RBrace, "}", "RIGHT_BRACE } null"),
+        (TokenKind::LBracket, "[", "LEFT_BRACKET [ null"),
+        (TokenKind::RBracket, "]", "RIGHT_BRACKET ] null"),
+        (TokenKind::Comma, ",", "COMMA , null"),
+        (TokenKind::Colon, ":", "COLON : null"),
+        (TokenKind::SemiColon, ";", "SEMICOLON ; null"),
+        (TokenKind::Dot, ".", "DOT . null"),
+        // Keywords
+        (TokenKind::If, "if", "IF if null"),
+        (TokenKind::Else, "else", "ELSE else null"),
+        (TokenKind::While, "while", "WHILE while null"),
+        (TokenKind::For, "for", "FOR for null"),
+        (TokenKind::Return, "return", "RETURN return null"),
+        (TokenKind::Fun, "fun", "FUN fun null"),
+        (TokenKind::True, "true", "TRUE true null"),
+        (TokenKind::False, "false", "FALSE false null"),
+        (TokenKind::Nil, "nil", "NIL nil null"),
+        (TokenKind::And, "and", "AND and null"),
+        (TokenKind::Or, "or", "OR or null"),
+        (TokenKind::Not, "not", "NOT not null"),
+        (TokenKind::In, "in", "IN in null"),
+        // Text Processing Keywords
+        (TokenKind::Split, "split", "SPLIT split null"),
+        (TokenKind::Join, "join", "JOIN join null"),
+        (TokenKind::Map, "map", "MAP map null"),
+        (TokenKind::Filter, "filter", "FILTER filter null"),
+        (TokenKind::Reduce, "reduce", "REDUCE reduce null"),
+        (TokenKind::Replace, "replace", "REPLACE replace null"),
+        (TokenKind::Extract, "extract", "EXTRACT extract null"),
+        // Strings and Numbers
+        (TokenKind::String, "\"hello\"", "STRING \"hello\" null"),
+        (TokenKind::Number(42.0), "42", "NUMBER 42 42.0"),
+        (TokenKind::Ident, "identifier", "IDENTIFIER identifier null"),
+        // Built-in Functions
+        (TokenKind::Length, "length", "LENGTH length null"),
+        (TokenKind::TypeOf, "typeOf", "TYPE_OF typeOf null"),
+        (TokenKind::Range, "range", "RANGE range null"),
+        (TokenKind::Concatenate, "concat", "CONCATENATE concat null"),
+        // Arithmetic Operators
+        (TokenKind::Plus, "+", "PLUS + null"),
+        (TokenKind::Minus, "-", "MINUS - null"),
+        (TokenKind::Star, "*", "STAR * null"),
+        (TokenKind::Slash, "/", "SLASH / null"),
+        (TokenKind::Percent, "%", "PERCENT % null"),
+        // Comparison operators
+        (TokenKind::Equal, "=", "EQUAL = null"),
+        (TokenKind::Bang, "!", "BANG ! null"),
+        (TokenKind::BangEqual, "!=", "BANG_EQUAL != null"),
+        (TokenKind::EqualEqual, "==", "EQUAL_EQUAL == null"),
+        (TokenKind::Greater, ">", "GREATER > null"),
+        (TokenKind::GreaterEqual, ">=", "GREATER_EQUAL >= null"),
+        (TokenKind::Less, "<", "LESS < null"),
+        (TokenKind::LessEqual, "<=", "LESS_EQUAL <= null"),
+        // Comments
+        (TokenKind::LineComment, "//", "LINE_COMMENT // null"),
+        (TokenKind::BlockComment, "/*", "BLOCK_COMMENT /* null"),
+    ];
+
+    for (kind, origin, expected_display) in test_cases {
+        let token = create_token(origin, 0, kind);
+        assert_eq!(format!("{}", token), expected_display);
+    }
 }

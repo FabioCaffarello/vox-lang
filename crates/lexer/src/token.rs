@@ -26,8 +26,8 @@ pub enum TokenKind {
     Nil,
     String,
     Number(f64),
-    Array,
-    Dict,
+    // Array,
+    // Dict,
     And,
     Or,
     Not,
@@ -48,13 +48,13 @@ pub enum TokenKind {
     // Built-in Functions
     Length,
     TypeOf,
+    Range,
+    Concatenate,
     // ToNumber, ToString,
     // UpperCase, LowerCase, Trim, Contains, Substring, IndexOf,
 
     // Special Symbols
-    Pipeline,
-    Range,
-    Concatenate,
+    // Pipeline,
 
     // Arithmetic Operators
     Plus,
@@ -110,17 +110,6 @@ impl fmt::Display for Token<'_> {
             TokenKind::True => write!(f, "TRUE {origin} null"),
             TokenKind::False => write!(f, "FALSE {origin} null"),
             TokenKind::Nil => write!(f, "NIL {origin} null"),
-            TokenKind::String => write!(f, "STRING {origin} null"),
-            TokenKind::Number(n) => {
-                if n == n.trunc() {
-                    // tests require that integers are printed as N.0
-                    write!(f, "NUMBER {origin} {n}.0")
-                } else {
-                    write!(f, "NUMBER {origin} {n}")
-                }
-            }
-            TokenKind::Array => write!(f, "ARRAY {origin} null"),
-            TokenKind::Dict => write!(f, "DICT {origin} null"),
             TokenKind::And => write!(f, "AND {origin} null"),
             TokenKind::Or => write!(f, "OR {origin} null"),
             TokenKind::Not => write!(f, "NOT {origin} null"),
@@ -133,11 +122,25 @@ impl fmt::Display for Token<'_> {
             TokenKind::Reduce => write!(f, "REDUCE {origin} null"),
             TokenKind::Replace => write!(f, "REPLACE {origin} null"),
             TokenKind::Extract => write!(f, "EXTRACT {origin} null"),
+            // Strings and Numbers
+            TokenKind::String => write!(f, "STRING {origin} null"),
+            TokenKind::Number(n) => {
+                if n == n.trunc() {
+                    // tests require that integers are printed as N.0
+                    write!(f, "NUMBER {origin} {n}.0")
+                } else {
+                    write!(f, "NUMBER {origin} {n}")
+                }
+            }
+            // TokenKind::Array => write!(f, "ARRAY {origin} null"),
+            // TokenKind::Dict => write!(f, "DICT {origin} null"),
             // Literals
             TokenKind::Ident => write!(f, "IDENTIFIER {origin} null"),
             // Built-in Functions
             TokenKind::Length => write!(f, "LENGTH {origin} null"),
             TokenKind::TypeOf => write!(f, "TYPE_OF {origin} null"),
+            TokenKind::Range => write!(f, "RANGE {origin} null"),
+            TokenKind::Concatenate => write!(f, "CONCATENATE {origin} null"),
             // TokenKind::ToNumber => write!(f, "TO_NUMBER {origin} null"),
             // TokenKind::ToString => write!(f, "TO_STRING {origin} null"),
             // TokenKind::UpperCase => write!(f, "UPPER_CASE {origin} null"),
@@ -147,9 +150,7 @@ impl fmt::Display for Token<'_> {
             // TokenKind::Substring => write!(f, "SUBSTRING {origin} null"),
             // TokenKind::IndexOf => write!(f, "INDEX_OF {origin} null"),
             // Special Symbols
-            TokenKind::Pipeline => write!(f, "PIPELINE {origin} null"),
-            TokenKind::Range => write!(f, "RANGE {origin} null"),
-            TokenKind::Concatenate => write!(f, "CONCATENATE {origin} null"),
+            // TokenKind::Pipeline => write!(f, "PIPELINE {origin} null"),
             // Arithmetic Operators
             TokenKind::Plus => write!(f, "PLUS {origin} null"),
             TokenKind::Minus => write!(f, "MINUS {origin} null"),

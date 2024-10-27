@@ -243,6 +243,15 @@ impl<'de> Lexer<'de> {
                     escaped = false;
                 } else if ch == '\\' {
                     escaped = true; // Escape the next character
+                } else if ch == '\n' {
+                    // Found an unescaped newline, which is not allowed
+                    let err = StringTerminationError {
+                        src: self.whole.to_string(),
+                        err_span: SourceSpan::from(self.byte + i..self.byte + i + 1),
+                    };
+                    self.byte += i + 1;
+                    self.rest = &self.rest[i + 1..];
+                    return Some(Err(err.into()));
                 } else if ch == '"' {
                     // Found the closing quote
                     self.byte += i + 1;
@@ -273,50 +282,78 @@ impl<'de> Lexer<'de> {
         c: char,
         offset: usize,
     ) -> Option<Result<Token<'de>, miette::Error>> {
-        match c {
-            '0'..='9' => {
-                let first_non_digit = self
-                    .c_onwards
-                    .find(|c| !matches!(c, '.' | '0'..='9'))
-                    .unwrap_or(self.c_onwards.len());
+        if c.is_ascii_digit() || c == '.' {
+            let start_offset = self.byte - c.len_utf8();
+            let mut literal = c.to_string();
+            let mut chars_iter = self.rest.char_indices();
+            let mut chars_consumed = 0;
+            let mut has_dot = c == '.';
+            let mut digits_before_dot = c.is_ascii_digit();
+            let mut digits_after_dot = false;
+            let mut has_invalid_chars = false;
 
-                let mut literal = &self.c_onwards[..first_non_digit];
-                let mut dotted = literal.splitn(3, '.');
-
-                match (dotted.next(), dotted.next(), dotted.next()) {
-                    (Some(one), Some(two), Some(_)) => {
-                        literal = &literal[..one.len() + 1 + two.len()];
+            while let Some((_, ch)) = chars_iter.next() {
+                if ch.is_ascii_digit() {
+                    literal.push(ch);
+                    chars_consumed += ch.len_utf8();
+                    if has_dot {
+                        digits_after_dot = true;
+                    } else {
+                        digits_before_dot = true;
                     }
-                    (Some(one), Some(""), None) => {
-                        literal = &literal[..one.len()];
+                } else if ch == '.' {
+                    if has_dot {
+                        // Second dot encountered, invalid number
+                        literal.push(ch);
+                        chars_consumed += ch.len_utf8();
+                        has_invalid_chars = true;
+                    } else {
+                        has_dot = true;
+                        literal.push(ch);
+                        chars_consumed += ch.len_utf8();
                     }
-                    _ => {
-                        // leave literal as-is
-                    }
+                } else if ch.is_alphabetic() || ch == '_' {
+                    // Include letters in the literal to produce an error
+                    literal.push(ch);
+                    chars_consumed += ch.len_utf8();
+                    has_invalid_chars = true;
+                } else {
+                    break;
                 }
-                let extra_bytes = literal.len() - c.len_utf8();
-                self.byte += extra_bytes;
-                self.rest = &self.rest[extra_bytes..];
+            }
 
-                let n = match literal.parse() {
-                    Ok(n) => n,
-                    Err(e) => {
-                        return Some(Err(miette::miette! {
-                                labels = vec![
-                                    LabeledSpan::at(self.byte - literal.len()..self.byte, "this numeric literal"),
-                                ],
-                                "{e}",
-                            }.with_source_code(self.whole.to_string())));
-                    }
-                };
+            // Advance the iterator
+            self.byte += chars_consumed;
+            self.rest = &self.rest[chars_consumed..];
 
-                Some(Ok(Token {
-                    origin: literal,
+            // Validate the number
+            if has_invalid_chars || (has_dot && (!digits_before_dot || !digits_after_dot)) {
+                return Some(Err(miette::miette! {
+                    labels = vec![
+                        LabeledSpan::at(start_offset..self.byte, "this numeric literal"),
+                    ],
+                    "Invalid number literal",
+                }
+                .with_source_code(self.whole.to_string())));
+            }
+
+            // Validate that the literal is a valid number
+            match literal.parse::<f64>() {
+                Ok(n) => Some(Ok(Token {
+                    origin: &self.whole[start_offset..self.byte],
                     offset,
                     kind: TokenKind::Number(n),
-                }))
+                })),
+                Err(_) => Some(Err(miette::miette! {
+                    labels = vec![
+                        LabeledSpan::at(start_offset..self.byte, "this numeric literal"),
+                    ],
+                    "Invalid number literal",
+                }
+                .with_source_code(self.whole.to_string()))),
             }
-            _ => None,
+        } else {
+            None
         }
     }
 }
