@@ -1,4 +1,5 @@
 use ast::ast::Ast;
+use ast::evaluator::ASTEvaluator;
 use clap::{Parser as CParser, Subcommand};
 use lexer::Lexer;
 use miette::{IntoDiagnostic, WrapErr};
@@ -66,15 +67,14 @@ fn main() -> miette::Result<()> {
 
             match Parser::from_input(&file_contents) {
                 Ok(mut parser) => {
-                    // Proceed with parsing
-                    // for token in parser.tokens {
-                    //     println!("{token}");
-                    // }
                     let mut ast = Ast::new();
                     while let Some(statement) = parser.next_statement() {
                         ast.add_statement(statement);
                     }
                     ast.visualize();
+                    let mut eval = ASTEvaluator::new();
+                    ast.visit(&mut eval);
+                    println!("Result: {:?}", eval.last_value);
                 }
                 Err(e) => {
                     // Use miette to report the error

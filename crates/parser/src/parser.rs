@@ -1,3 +1,5 @@
+use core::panic;
+
 use crate::errors::ParserError;
 use ast::{ast::ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTStatement};
 use lexer::{Lexer, Token, TokenKind};
@@ -74,6 +76,7 @@ impl<'de> Parser<'de> {
         'outer: while {
             let operator = self.parse_binary_operator();
             if let Some(operator) = operator {
+                self.consume()?;
                 let operator_precedence = operator.precedence();
                 if operator_precedence < precedence {
                     break 'outer;
@@ -93,12 +96,20 @@ impl<'de> Parser<'de> {
         let token = self.consume()?;
         match token.kind {
             TokenKind::Number(number) => Some(ASTExpression::number_literal(number)),
+            TokenKind::LParen => {
+                let expr = self.parse_expression()?;
+                let token = self.consume()?;
+                if token.kind != TokenKind::RParen {
+                    panic!("Expected closing parenthesis");
+                }
+                Some(ASTExpression::parenthesized_expression(expr))
+            }
             _ => None,
         }
     }
 
     fn parse_binary_operator(&mut self) -> Option<ASTBinaryOperator<'de>> {
-        let token = self.consume()?;
+        let token = self.current()?.clone();
         let kind = match token.kind {
             TokenKind::Plus => Some(ASTBinaryOperatorKind::Plus),
             TokenKind::Minus => Some(ASTBinaryOperatorKind::Subtract),

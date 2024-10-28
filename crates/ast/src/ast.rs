@@ -48,6 +48,9 @@ pub trait ASTVisitor {
             ASTExpressionKind::BinaryExpression(expr) => {
                 self.visit_binary_expression(expr);
             }
+            ASTExpressionKind::ParenthesizedExpression(expr) => {
+                self.visit_parenthesized_expression(expr);
+            }
         }
     }
 
@@ -62,6 +65,12 @@ pub trait ASTVisitor {
     fn do_visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression) {
         self.visit_expression(&binary_expression.left);
         self.visit_expression(&binary_expression.right);
+    }
+
+    fn visit_parenthesized_expression(&mut self, parenthesized_expression: &ASTParenthesizedExpression);
+
+    fn do_visit_parenthesized_expression(&mut self, parenthesized_expression: &ASTParenthesizedExpression) {
+        self.visit_expression(&parenthesized_expression.expression);
     }
 }
 
@@ -97,6 +106,13 @@ impl ASTVisitor for ASTPrinter {
         ASTVisitor::do_visit_binary_expression(self, binary_expression);
         self.indent -= LEVEL_INDENT;
     }
+
+    fn visit_parenthesized_expression(&mut self, parenthesized_expression: &ASTParenthesizedExpression) {
+        self.print_with_indent("Parenthesized Expression:");
+        self.indent += LEVEL_INDENT;
+        ASTVisitor::do_visit_parenthesized_expression(self, parenthesized_expression);
+        self.indent -= LEVEL_INDENT;
+    }
 }
 
 impl ASTPrinter {
@@ -106,7 +122,11 @@ impl ASTPrinter {
 }
 
 pub struct ASTNumberExpression {
-    number: f64,
+    pub number: f64,
+}
+
+pub struct ASTParenthesizedExpression<'de> {
+    pub expression: Box<ASTExpression<'de>>,
 }
 
 #[derive(Debug)]
@@ -118,7 +138,7 @@ pub enum ASTBinaryOperatorKind {
 }
 
 pub struct ASTBinaryOperator<'de> {
-    kind: ASTBinaryOperatorKind,
+    pub kind: ASTBinaryOperatorKind,
     token: Token<'de>,
 }
 
@@ -138,9 +158,9 @@ impl<'de> ASTBinaryOperator<'de> {
 }
 
 pub struct ASTBinaryExpression<'de> {
-    left: Box<ASTExpression<'de>>,
-    operator: ASTBinaryOperator<'de>,
-    right: Box<ASTExpression<'de>>,
+    pub left: Box<ASTExpression<'de>>,
+    pub operator: ASTBinaryOperator<'de>,
+    pub right: Box<ASTExpression<'de>>,
 }
 
 pub enum ASTStatementKind<'de> {
@@ -164,6 +184,7 @@ impl<'de> ASTStatement<'de> {
 pub enum ASTExpressionKind<'de> {
     NumberLiteral(ASTNumberExpression),
     BinaryExpression(ASTBinaryExpression<'de>),
+    ParenthesizedExpression(ASTParenthesizedExpression<'de>),
 }
 
 pub struct ASTExpression<'de> {
@@ -191,5 +212,13 @@ impl<'de> ASTExpression<'de> {
             operator,
             right: Box::new(right),
         }))
+    }
+
+    pub fn parenthesized_expression(expression: ASTExpression<'de>) -> Self {
+        ASTExpression::new(ASTExpressionKind::ParenthesizedExpression(
+            ASTParenthesizedExpression {
+                expression: Box::new(expression),
+            },
+        ))
     }
 }
