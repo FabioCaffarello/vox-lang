@@ -409,9 +409,11 @@ fn test_unrecognized_characters() {
         }
     }
 
-    assert_eq!(errors_found, 5, "Expected 5 errors for unrecognized characters");
+    assert_eq!(
+        errors_found, 5,
+        "Expected 5 errors for unrecognized characters"
+    );
 }
-
 
 #[test]
 fn test_nested_comments() {
@@ -451,7 +453,7 @@ fn test_strings_with_escapes() {
             "Token origin does not match expected origin"
         );
     }
-    
+
     assert_eof(&mut lexer);
 }
 
@@ -537,6 +539,118 @@ fn test_complex_nested_expressions() {
 }
 
 #[test]
+fn test_collect_tokens_no_errors() {
+    let input = "let x = 42;";
+    let mut lexer = Lexer::new(input);
+    let (tokens, errors) = lexer.collect_tokens();
+
+    // Ensure there are no errors
+    assert!(errors.is_empty(), "Expected no errors, but found some");
+    assert_eq!(tokens.len(), 6, "Expected 5 tokens"); // 5 tokens + EOF
+
+    // Expected tokens
+    let expected_tokens = vec![
+        create_token("let", 0, TokenKind::Ident),
+        create_token("x", 4, TokenKind::Ident),
+        create_token("=", 6, TokenKind::Equal),
+        create_token("42", 8, TokenKind::Number(42.0)),
+        create_token(";", 10, TokenKind::SemiColon),
+        create_token("", 11, TokenKind::EOF), // EOF token
+    ];
+
+    for (expected, actual) in expected_tokens.iter().zip(tokens.iter()) {
+        assert_eq!(expected, actual, "Token does not match expected value");
+    }
+}
+
+#[test]
+fn test_collect_tokens_with_errors() {
+    let input = "let x = 42$;";
+    let mut lexer = Lexer::new(input);
+    let (tokens, errors) = lexer.collect_tokens();
+
+    // Ensure there is at least one error
+    assert!(!errors.is_empty(), "Expected errors, but found none");
+
+    // Expected tokens (the lexer continues after errors)
+    let expected_tokens = vec![
+        create_token("let", 0, TokenKind::Ident),
+        create_token("x", 4, TokenKind::Ident),
+        create_token("=", 6, TokenKind::Equal),
+        create_token("42", 8, TokenKind::Number(42.0)),
+        // The '$' character is invalid and produces an error
+        // The lexer continues and collects the semicolon
+        create_token(";", 11, TokenKind::SemiColon),
+        create_token("", 12, TokenKind::EOF), // EOF token
+    ];
+
+    for (expected, actual) in expected_tokens.iter().zip(tokens.iter()) {
+        assert_eq!(expected, actual, "Token does not match expected value");
+    }
+
+    // Check that the error is as expected
+    assert_eq!(errors.len(), 1, "Expected one error");
+
+    let error_message = format!("{}", errors[0]);
+    assert!(
+        error_message.contains("Unexpected token"),
+        "Expected an unrecognized token error, got: {}",
+        error_message
+    );
+}
+
+#[test]
+fn test_collect_tokens_empty_input() {
+    let input = "";
+    let mut lexer = Lexer::new(input);
+    let (tokens, errors) = lexer.collect_tokens();
+
+    // Ensure there are no errors
+    assert!(errors.is_empty(), "Expected no errors, but found some");
+
+    // Expected tokens (only EOF token)
+    let expected_tokens = vec![create_token("", 0, TokenKind::EOF)];
+
+    assert_eq!(tokens, expected_tokens, "Tokens do not match expected");
+}
+
+#[test]
+fn test_collect_tokens_multiple_errors() {
+    let input = "let @x = #42;";
+    let mut lexer = Lexer::new(input);
+    let (tokens, errors) = lexer.collect_tokens();
+
+    // Ensure there are errors
+    assert_eq!(errors.len(), 2, "Expected two errors");
+
+    // Expected tokens (lexer continues after errors)
+    let expected_tokens = vec![
+        create_token("let", 0, TokenKind::Ident),
+        // '@' is an invalid character, error occurs here
+        create_token("x", 5, TokenKind::Ident),
+        create_token("=", 7, TokenKind::Equal),
+        // '#' is an invalid character, error occurs here
+        create_token("42", 10, TokenKind::Number(42.0)),
+        create_token(";", 12, TokenKind::SemiColon),
+        create_token("", 13, TokenKind::EOF),
+    ];
+
+    for (expected, actual) in expected_tokens.iter().zip(tokens.iter()) {
+        assert_eq!(expected, actual, "Token does not match expected value");
+    }
+
+    // Check error messages
+    let error_messages: Vec<String> = errors.iter().map(|e| format!("{}", e)).collect();
+    for message in &error_messages {
+        assert!(
+            message.contains("Unexpected token"),
+            "Expected an unrecognized token error, got: {}",
+            message
+        );
+    }
+}
+
+#[test]
 fn test_token_display() {
     let test_cases = vec![
         // Punctuators and Delimiters
@@ -599,6 +713,8 @@ fn test_token_display() {
         // Comments
         (TokenKind::LineComment, "//", "LINE_COMMENT // null"),
         (TokenKind::BlockComment, "/*", "BLOCK_COMMENT /* null"),
+        // EOF
+        (TokenKind::EOF, "", "EOF  null"),
     ];
 
     for (kind, origin, expected_display) in test_cases {

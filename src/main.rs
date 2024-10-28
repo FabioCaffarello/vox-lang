@@ -1,10 +1,12 @@
-use clap::{Parser, Subcommand};
+use ast::ast::Ast;
+use clap::{Parser as CParser, Subcommand};
 use lexer::Lexer;
 use miette::{IntoDiagnostic, WrapErr};
+use parser::Parser;
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Parser, Debug)]
+#[derive(CParser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     #[command(subcommand)]
@@ -50,13 +52,39 @@ fn main() -> miette::Result<()> {
                 };
                 println!("{token}");
             }
-            println!("EOF  null");
 
             if any_cc_err {
                 std::process::exit(65);
             }
         }
         Commands::Parse { filename } => {
+            let mut any_cc_err = false;
+
+            let file_contents = fs::read_to_string(&filename)
+                .into_diagnostic()
+                .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
+
+            match Parser::from_input(&file_contents) {
+                Ok(mut parser) => {
+                    // Proceed with parsing
+                    // for token in parser.tokens {
+                    //     println!("{token}");
+                    // }
+                    let mut ast = Ast::new();
+                    while let Some(statement) = parser.next_statement() {
+                        ast.add_statement(statement);
+                    }
+                    ast.visualize();
+                }
+                Err(e) => {
+                    // Use miette to report the error
+                    eprintln!("{}", miette::Report::new(e));
+                    any_cc_err = true;
+                }
+            }
+            if any_cc_err {
+                std::process::exit(65);
+            }
         }
     }
     Ok(())

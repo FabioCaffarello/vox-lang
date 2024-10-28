@@ -18,6 +18,8 @@ path = "src/main.rs"
 
 [dependencies]
 lexer = { path = "crates/lexer" }
+parser = { path = "crates/parser" }
+ast = { path = "crates/ast" }
 miette = { version = "7.2.0", features = ["fancy"] }
 bytes = "1.3.0"
 clap = { version = "4.5.16", features = ["derive"] }

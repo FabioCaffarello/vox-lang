@@ -1,6 +1,6 @@
 use crate::errors::{SingleTokenError, StringTerminationError};
 use crate::token::{Token, TokenKind};
-use miette::{Error, LabeledSpan, SourceSpan};
+use miette::{Error, LabeledSpan, Report, SourceSpan};
 
 pub struct Lexer<'de> {
     whole: &'de str,
@@ -21,6 +21,20 @@ impl<'de> Lexer<'de> {
             peeked: None,
             emitted_eof: false,
         }
+    }
+
+    pub fn collect_tokens(&mut self) -> (Vec<Token<'de>>, Vec<Report>) {
+        let mut tokens = Vec::new();
+        let mut errors = Vec::new();
+
+        while let Some(item) = self.next() {
+            match item {
+                Ok(token) => tokens.push(token),
+                Err(error) => errors.push(error),
+            }
+        }
+
+        (tokens, errors)
     }
 
     fn just(
@@ -445,12 +459,11 @@ impl<'de> Iterator for Lexer<'de> {
             }
 
             // Handle unrecognized tokens
-            return Some(Err(SingleTokenError {
+            return Some(Err(Report::new(SingleTokenError {
                 src: self.whole.to_string(),
                 token: c,
                 err_span: SourceSpan::from(self.byte - c.len_utf8()..self.byte),
-            }
-            .into()));
+            })));
         }
     }
 }
