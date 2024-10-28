@@ -1,5 +1,5 @@
 use crate::errors::ParserError;
-use ast::{ast::ASTBinaryOperator, ASTExpression, ASTStatement, ASTBinaryOperatorKind};
+use ast::{ast::ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTStatement};
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
 
@@ -10,11 +10,15 @@ pub struct Parser<'de> {
 
 impl<'de> Parser<'de> {
     pub fn new(tokens: Vec<Token<'de>>) -> Self {
-        Self { 
-            tokens: tokens.iter().filter(
-                |token| token.kind != TokenKind::LineComment && token.kind != TokenKind::BlockComment
-            ).map(|token| token.clone()).collect(),
-            current: 0 
+        Self {
+            tokens: tokens
+                .iter()
+                .filter(|token| {
+                    token.kind != TokenKind::LineComment && token.kind != TokenKind::BlockComment
+                })
+                .map(|token| token.clone())
+                .collect(),
+            current: 0,
         }
     }
 

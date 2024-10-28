@@ -181,7 +181,11 @@ impl<'de> ASTExpression<'de> {
         }))
     }
 
-    pub fn binary_expression(left: ASTExpression<'de>, operator: ASTBinaryOperator<'de>, right: ASTExpression<'de>) -> Self {
+    pub fn binary_expression(
+        left: ASTExpression<'de>,
+        operator: ASTBinaryOperator<'de>,
+        right: ASTExpression<'de>,
+    ) -> Self {
         ASTExpression::new(ASTExpressionKind::BinaryExpression(ASTBinaryExpression {
             left: Box::new(left),
             operator,

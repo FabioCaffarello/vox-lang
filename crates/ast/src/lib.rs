@@ -1,3 +1,6 @@
 pub mod ast;
 
-pub use ast::{ASTExpression, ASTStatement, ASTStatementKind, ASTBinaryOperator, ASTBinaryOperatorKind, ASTBinaryExpression, ASTNumberExpression};
+pub use ast::{
+    ASTBinaryExpression, ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression,
+    ASTNumberExpression, ASTStatement, ASTStatementKind,
+};
