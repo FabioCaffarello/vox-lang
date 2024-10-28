@@ -10,6 +10,20 @@ fn create_token(origin: &str, offset: usize, kind: TokenKind) -> Token {
     }
 }
 
+fn assert_eof(lexer: &mut Lexer) {
+    // Expect EOF token
+    let token_result = lexer.next();
+    assert!(token_result.is_some(), "Expected EOF token but got None");
+    let token = token_result.unwrap();
+    assert!(token.is_ok(), "Expected Ok(Token) for EOF but got Err");
+    let token = token.unwrap();
+    assert_eq!(token.kind, TokenKind::EOF, "Expected EOF token");
+    assert!(
+        lexer.next().is_none(),
+        "Lexer should return None after EOF token"
+    );
+}
+
 #[test]
 fn test_single_token_error() {
     let input = "@";
@@ -49,10 +63,7 @@ fn test_string_termination_error() {
 fn test_empty_input() {
     let input = "";
     let mut lexer = Lexer::new(input);
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None for empty input"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -81,10 +92,7 @@ fn test_punctuators() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -113,10 +121,7 @@ fn test_identifiers_and_keywords() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -141,6 +146,7 @@ fn test_comparison_operators() {
         let token = token_result.unwrap().unwrap();
         assert_eq!(token, expected, "Token does not match expected value");
     }
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -152,6 +158,7 @@ fn test_valid_numbers() {
         assert!(token_result.is_some(), "Expected a token but got None");
         let token = token_result.unwrap().unwrap();
         assert_eq!(token.kind, TokenKind::Number(input.parse::<f64>().unwrap()));
+        assert_eof(&mut lexer);
     }
 }
 
@@ -237,10 +244,7 @@ fn test_numbers() {
         );
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -307,11 +311,7 @@ fn test_strings() {
         "Error message does not contain 'Unterminated string'"
     );
 
-    // No more tokens
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -334,10 +334,7 @@ fn test_whitespace_variations() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -362,10 +359,7 @@ fn test_operators() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -396,25 +390,28 @@ Need to skip the entire block*/
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    // Ensure no more tokens
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
 fn test_unrecognized_characters() {
     let input = "@ # $ ^ &";
-    let lexer = Lexer::new(input);
+    let mut lexer = Lexer::new(input);
+    let mut errors_found = 0;
 
-    for result in lexer {
-        assert!(
-            result.is_err(),
-            "Expected an error for unrecognized characters"
-        );
+    while let Some(result) = lexer.next() {
+        match result {
+            Err(_) => errors_found += 1,
+            Ok(token) => {
+                // Expect only EOF token as Ok(Token)
+                assert_eq!(token.kind, TokenKind::EOF, "Expected only errors and EOF");
+            }
+        }
     }
+
+    assert_eq!(errors_found, 5, "Expected 5 errors for unrecognized characters");
 }
+
 
 #[test]
 fn test_nested_comments() {
@@ -454,6 +451,8 @@ fn test_strings_with_escapes() {
             "Token origin does not match expected origin"
         );
     }
+    
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -479,10 +478,7 @@ fn test_adjacent_operators_and_punctuation() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -504,10 +500,7 @@ fn test_identifiers_with_keywords() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]
@@ -540,10 +533,7 @@ fn test_complex_nested_expressions() {
         assert_eq!(token, expected, "Token does not match expected value");
     }
 
-    assert!(
-        lexer.next().is_none(),
-        "Lexer should return None after all tokens are consumed"
-    );
+    assert_eof(&mut lexer);
 }
 
 #[test]

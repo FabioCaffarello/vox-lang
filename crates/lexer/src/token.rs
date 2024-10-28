@@ -76,6 +76,8 @@ pub enum TokenKind {
     // Comments
     LineComment,
     BlockComment,
+
+    EOF,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -169,6 +171,8 @@ impl fmt::Display for Token<'_> {
             // Comments
             TokenKind::LineComment => write!(f, "LINE_COMMENT {origin} null"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT {origin} null"),
+
+            TokenKind::EOF => write!(f, "EOF {origin} null"),
         }
     }
 }

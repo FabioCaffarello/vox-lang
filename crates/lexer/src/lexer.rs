@@ -8,6 +8,7 @@ pub struct Lexer<'de> {
     c_onwards: &'de str,
     byte: usize,
     peeked: Option<Result<Token<'de>, miette::Error>>,
+    emitted_eof: bool,
 }
 
 impl<'de> Lexer<'de> {
@@ -18,6 +19,7 @@ impl<'de> Lexer<'de> {
             c_onwards: input,
             byte: 0,
             peeked: None,
+            emitted_eof: false,
         }
     }
 
@@ -368,8 +370,48 @@ impl<'de> Iterator for Lexer<'de> {
         }
 
         loop {
+            // Skip over any whitespace
+            while let Some(c) = self.rest.chars().next() {
+                if c.is_whitespace() {
+                    self.byte += c.len_utf8();
+                    self.rest = &self.rest[c.len_utf8()..];
+                } else {
+                    break;
+                }
+            }
+
+            // Check if we've reached the end of input
+            if self.rest.is_empty() {
+                if !self.emitted_eof {
+                    self.emitted_eof = true;
+                    // Emit EOF token
+                    return Some(Ok(Token {
+                        origin: "",
+                        offset: self.byte,
+                        kind: TokenKind::EOF,
+                    }));
+                } else {
+                    // EOF token already emitted, return None
+                    return None;
+                }
+            }
+
             let mut chars = self.rest.chars();
-            let c = chars.next()?;
+            let c_opt = chars.next();
+            if c_opt.is_none() {
+                // Handle unexpected empty rest
+                if !self.emitted_eof {
+                    self.emitted_eof = true;
+                    return Some(Ok(Token {
+                        origin: "",
+                        offset: self.byte,
+                        kind: TokenKind::EOF,
+                    }));
+                } else {
+                    return None;
+                }
+            }
+            let c = c_opt.unwrap();
             let c_at = self.byte;
             let c_str = &self.rest[..c.len_utf8()];
             self.c_onwards = self.rest;
@@ -400,11 +442,6 @@ impl<'de> Iterator for Lexer<'de> {
 
             if let Some(kind) = self.match_number(c, c_at) {
                 return Some(kind);
-            }
-
-            // Skip whitespace
-            if c.is_whitespace() {
-                continue;
             }
 
             // Handle unrecognized tokens
