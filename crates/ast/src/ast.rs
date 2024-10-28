@@ -67,9 +67,15 @@ pub trait ASTVisitor {
         self.visit_expression(&binary_expression.right);
     }
 
-    fn visit_parenthesized_expression(&mut self, parenthesized_expression: &ASTParenthesizedExpression);
+    fn visit_parenthesized_expression(
+        &mut self,
+        parenthesized_expression: &ASTParenthesizedExpression,
+    );
 
-    fn do_visit_parenthesized_expression(&mut self, parenthesized_expression: &ASTParenthesizedExpression) {
+    fn do_visit_parenthesized_expression(
+        &mut self,
+        parenthesized_expression: &ASTParenthesizedExpression,
+    ) {
         self.visit_expression(&parenthesized_expression.expression);
     }
 }
@@ -107,7 +113,10 @@ impl ASTVisitor for ASTPrinter {
         self.indent -= LEVEL_INDENT;
     }
 
-    fn visit_parenthesized_expression(&mut self, parenthesized_expression: &ASTParenthesizedExpression) {
+    fn visit_parenthesized_expression(
+        &mut self,
+        parenthesized_expression: &ASTParenthesizedExpression,
+    ) {
         self.print_with_indent("Parenthesized Expression:");
         self.indent += LEVEL_INDENT;
         ASTVisitor::do_visit_parenthesized_expression(self, parenthesized_expression);

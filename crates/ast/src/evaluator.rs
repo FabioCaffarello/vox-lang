@@ -1,4 +1,4 @@
-use crate::ast::{ASTVisitor, ASTBinaryExpression, ASTNumberExpression, ASTBinaryOperatorKind};
+use crate::ast::{ASTBinaryExpression, ASTBinaryOperatorKind, ASTNumberExpression, ASTVisitor};
 
 pub struct ASTEvaluator {
     pub last_value: Option<f64>,
@@ -28,7 +28,10 @@ impl ASTVisitor for ASTEvaluator {
         });
     }
 
-    fn visit_parenthesized_expression(&mut self, parenthesized_expression: &crate::ast::ASTParenthesizedExpression) {
+    fn visit_parenthesized_expression(
+        &mut self,
+        parenthesized_expression: &crate::ast::ASTParenthesizedExpression,
+    ) {
         self.visit_expression(&parenthesized_expression.expression);
     }
 }
