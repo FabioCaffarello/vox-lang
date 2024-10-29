@@ -45,11 +45,7 @@ impl<'de> DiagnosticsBag<'de> {
         self.report(message, span, DiagnosticKind::Warning);
     }
 
-    pub fn report_unexpected_token(
-        &mut self,
-        expected: &TokenKind,
-        token: &Token<'de>,
-    ) {
+    pub fn report_unexpected_token(&mut self, expected: &TokenKind, token: &Token<'de>) {
         let message = format!(
             "Unexpected token: expected '{}', found '{}'",
             expected, token.kind

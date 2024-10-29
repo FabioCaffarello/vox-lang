@@ -1,5 +1,5 @@
-pub mod span;
 pub mod source;
+pub mod span;
 
-pub use span::TextSpan;
 pub use source::SourceText;
+pub use span::TextSpan;

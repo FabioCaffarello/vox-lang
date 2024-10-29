@@ -8,13 +8,13 @@ use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
 
 pub struct Counter {
-    value: Cell<usize>
+    value: Cell<usize>,
 }
 
 impl Counter {
     pub fn new() -> Self {
         Self {
-            value: Cell::new(0)
+            value: Cell::new(0),
         }
     }
 
@@ -84,13 +84,13 @@ impl<'de> Parser<'de> {
         self.peek(-1).clone()
     }
 
-    fn consume_and_check(&self, kind: TokenKind) -> Token<'de> { // FIXME: &Token<'de>
+    fn consume_and_check(&self, kind: TokenKind) -> Token<'de> {
+        // FIXME: &Token<'de>
         let token = self.consume();
         if token.kind != kind {
-            self.diagnostics_bag.borrow_mut().report_unexpected_token(
-                &kind,
-                &token,
-            );
+            self.diagnostics_bag
+                .borrow_mut()
+                .report_unexpected_token(&kind, &token);
         }
         return token;
     }
@@ -147,9 +147,11 @@ impl<'de> Parser<'de> {
                 ASTExpression::parenthesized_expression(expr)
             }
             _ => {
-                self.diagnostics_bag.borrow_mut().report_unexpected_expression(&token);
+                self.diagnostics_bag
+                    .borrow_mut()
+                    .report_unexpected_expression(&token);
                 ASTExpression::error(token.span.clone())
-            },
+            }
         }
     }
 

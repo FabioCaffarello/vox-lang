@@ -163,7 +163,10 @@ pub struct ASTBinaryOperator<'de> {
 
 impl<'de> ASTBinaryOperator<'de> {
     pub fn new(kind: ASTBinaryOperatorKind, token: Token<'de>) -> Self {
-        ASTBinaryOperator { kind, _token: token }
+        ASTBinaryOperator {
+            kind,
+            _token: token,
+        }
     }
 
     pub fn precedence(&self) -> u8 {

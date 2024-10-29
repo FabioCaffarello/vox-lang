@@ -1,8 +1,8 @@
 use std::cmp;
 
 use crate::diagnostics::Diagnostic;
-use text::source::SourceText;
 use termion::color::{Fg, Red, Reset};
+use text::source::SourceText;
 
 pub struct DiagnosticPrinter<'a, 'de> {
     text: &'a SourceText,
@@ -11,23 +11,20 @@ pub struct DiagnosticPrinter<'a, 'de> {
 
 const PREFIX_LENGHT: usize = 8;
 
-impl <'a, 'de> DiagnosticPrinter<'a, 'de> {
+impl<'a, 'de> DiagnosticPrinter<'a, 'de> {
     pub fn new(text: &'a SourceText, diagnostics: &'a [Diagnostic<'de>]) -> Self {
-        Self {
-            text,
-            diagnostics,
-        }
+        Self { text, diagnostics }
     }
 
     /// Stringifies the diagnostic
     ///
     /// It uses the following format:
-    /// 
+    ///
     /// let <red>x<reset> = 5;
     ///          ^
     ///          |
     ///          +-- This is the error message (<line>:<column>)
-    /// 
+    ///
     pub fn stringify_diagnostic(&self, diagnostic: &Diagnostic<'de>) -> String {
         let line_index = self.text.line_index(diagnostic.span.start);
         let line = self.text.get_line(line_index);
@@ -93,5 +90,4 @@ impl <'a, 'de> DiagnosticPrinter<'a, 'de> {
             indent = indent
         )
     }
-
 }
