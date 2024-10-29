@@ -4,13 +4,13 @@ use clap::{Parser as CParser, Subcommand};
 use diagnostics::diagnostics::{DiagnosticsBag, DiagnosticsBagCell};
 use diagnostics::printer::DiagnosticPrinter;
 use lexer::Lexer;
-use text::source::SourceText;
 use miette::{IntoDiagnostic, WrapErr};
 use parser::Parser;
 use std::cell::RefCell;
 use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
+use text::source::SourceText;
 
 #[derive(CParser, Debug)]
 #[command(version, about, long_about = None)]
@@ -73,10 +73,7 @@ fn main() -> miette::Result<()> {
             let source_text = SourceText::new(file_contents.clone());
 
             let diagnostics_bag = DiagnosticsBagCell::new(RefCell::new(DiagnosticsBag::new()));
-            match Parser::from_input(
-                &file_contents, 
-                Rc::clone(&diagnostics_bag)
-            ) {
+            match Parser::from_input(&file_contents, Rc::clone(&diagnostics_bag)) {
                 Ok(mut parser) => {
                     let mut ast = Ast::new();
                     while let Some(statement) = parser.next_statement() {
@@ -84,10 +81,8 @@ fn main() -> miette::Result<()> {
                     }
                     let diagnostics_binding = diagnostics_bag.borrow();
                     if diagnostics_binding.diagnostics.len() > 0 {
-                        let diagnostics_printer = DiagnosticPrinter::new(
-                            &source_text,
-                            &diagnostics_binding.diagnostics,
-                        );
+                        let diagnostics_printer =
+                            DiagnosticPrinter::new(&source_text, &diagnostics_binding.diagnostics);
                         diagnostics_printer.print();
                         any_cc_err = true;
                     } else {
