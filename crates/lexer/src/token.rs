@@ -27,8 +27,6 @@ pub enum TokenKind {
     Nil,
     String,
     Number(f64),
-    // Array,
-    // Dict,
     And,
     Or,
     Not,
@@ -51,11 +49,6 @@ pub enum TokenKind {
     TypeOf,
     Range,
     Concatenate,
-    // ToNumber, ToString,
-    // UpperCase, LowerCase, Trim, Contains, Substring, IndexOf,
-
-    // Special Symbols
-    // Pipeline,
 
     // Arithmetic Operators
     Plus,
@@ -79,6 +72,66 @@ pub enum TokenKind {
     BlockComment,
 
     EOF,
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenKind::LParen => write!(f, "LEFT_PAREN"),
+            TokenKind::RParen => write!(f, "RIGHT_PAREN"),
+            TokenKind::LBrace => write!(f, "LEFT_BRACE"),
+            TokenKind::RBrace => write!(f, "RIGHT_BRACE"),
+            TokenKind::LBracket => write!(f, "LEFT_BRACKET"),
+            TokenKind::RBracket => write!(f, "RIGHT_BRACKET"),
+            TokenKind::Comma => write!(f, "COMMA"),
+            TokenKind::Colon => write!(f, "COLON"),
+            TokenKind::SemiColon => write!(f, "SEMICOLON"),
+            TokenKind::Dot => write!(f, "DOT"),
+            TokenKind::Plus => write!(f, "PLUS"),
+            TokenKind::Minus => write!(f, "MINUS"),
+            TokenKind::Star => write!(f, "STAR"),
+            TokenKind::Slash => write!(f, "SLASH"),
+            TokenKind::Percent => write!(f, "PERCENT"),
+            TokenKind::Equal => write!(f, "EQUAL"),
+            TokenKind::Bang => write!(f, "BANG"),
+            TokenKind::BangEqual => write!(f, "BANG_EQUAL"),
+            TokenKind::EqualEqual => write!(f, "EQUAL_EQUAL"),
+            TokenKind::Greater => write!(f, "GREATER"),
+            TokenKind::GreaterEqual => write!(f, "GREATER_EQUAL"),
+            TokenKind::Less => write!(f, "LESS"),
+            TokenKind::LessEqual => write!(f, "LESS_EQUAL"),
+            TokenKind::If => write!(f, "IF"),
+            TokenKind::Else => write!(f, "ELSE"),
+            TokenKind::While => write!(f, "WHILE"),
+            TokenKind::For => write!(f, "FOR"),
+            TokenKind::Return => write!(f, "RETURN"),
+            TokenKind::Fun => write!(f, "FUN"),
+            TokenKind::True => write!(f, "TRUE"),
+            TokenKind::False => write!(f, "FALSE"),
+            TokenKind::Nil => write!(f, "NIL"),
+            TokenKind::String => write!(f, "STRING"),
+            TokenKind::Number(_) => write!(f, "NUMBER"),
+            TokenKind::Ident => write!(f, "IDENTIFIER"),
+            TokenKind::Length => write!(f, "LENGTH"),
+            TokenKind::TypeOf => write!(f, "TYPE_OF"),
+            TokenKind::Range => write!(f, "RANGE"),
+            TokenKind::Concatenate => write!(f, "CONCATENATE"),
+            TokenKind::And => write!(f, "AND"),
+            TokenKind::Or => write!(f, "OR"),
+            TokenKind::Not => write!(f, "NOT"),
+            TokenKind::In => write!(f, "IN"),
+            TokenKind::Split => write!(f, "SPLIT"),
+            TokenKind::Join => write!(f, "JOIN"),
+            TokenKind::Map => write!(f, "MAP"),
+            TokenKind::Filter => write!(f, "FILTER"),
+            TokenKind::Reduce => write!(f, "REDUCE"),
+            TokenKind::Replace => write!(f, "REPLACE"),
+            TokenKind::Extract => write!(f, "EXTRACT"),
+            TokenKind::LineComment => write!(f, "LINE_COMMENT"),
+            TokenKind::BlockComment => write!(f, "BLOCK_COMMENT"),
+            TokenKind::EOF => write!(f, "EOF"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -134,8 +187,6 @@ impl fmt::Display for Token<'_> {
                     write!(f, "NUMBER {literal} {n}")
                 }
             }
-            // TokenKind::Array => write!(f, "ARRAY {literal} null"),
-            // TokenKind::Dict => write!(f, "DICT {literal} null"),
             // Literals
             TokenKind::Ident => write!(f, "IDENTIFIER {literal} null"),
             // Built-in Functions
@@ -143,16 +194,6 @@ impl fmt::Display for Token<'_> {
             TokenKind::TypeOf => write!(f, "TYPE_OF {literal} null"),
             TokenKind::Range => write!(f, "RANGE {literal} null"),
             TokenKind::Concatenate => write!(f, "CONCATENATE {literal} null"),
-            // TokenKind::ToNumber => write!(f, "TO_NUMBER {literal} null"),
-            // TokenKind::ToString => write!(f, "TO_STRING {literal} null"),
-            // TokenKind::UpperCase => write!(f, "UPPER_CASE {literal} null"),
-            // TokenKind::LowerCase => write!(f, "LOWER_CASE {literal} null"),
-            // TokenKind::Trim => write!(f, "TRIM {literal} null"),
-            // TokenKind::Contains => write!(f, "CONTAINS {literal} null"),
-            // TokenKind::Substring => write!(f, "SUBSTRING {literal} null"),
-            // TokenKind::IndexOf => write!(f, "INDEX_OF {literal} null"),
-            // Special Symbols
-            // TokenKind::Pipeline => write!(f, "PIPELINE {literal} null"),
             // Arithmetic Operators
             TokenKind::Plus => write!(f, "PLUS {literal} null"),
             TokenKind::Minus => write!(f, "MINUS {literal} null"),
