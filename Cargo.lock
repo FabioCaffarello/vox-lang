@@ -206,6 +206,7 @@ name = "lexer"
 version = "0.1.0"
 dependencies = [
  "miette",
+ "text",
  "thiserror",
 ]
 
@@ -384,6 +385,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "text"
+version = "0.1.0"
+
+[[package]]
 name = "textwrap"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -449,6 +454,7 @@ dependencies = [
  "lexer",
  "miette",
  "parser",
+ "text",
  "thiserror",
 ]
 
