@@ -1,11 +1,16 @@
 use ast::ast::Ast;
 use ast::evaluator::ASTEvaluator;
 use clap::{Parser as CParser, Subcommand};
+use diagnostics::diagnostics::{DiagnosticsBag, DiagnosticsBagCell};
+use diagnostics::printer::DiagnosticPrinter;
 use lexer::Lexer;
+use text::source::SourceText;
 use miette::{IntoDiagnostic, WrapErr};
 use parser::Parser;
+use std::cell::RefCell;
 use std::fs;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 #[derive(CParser, Debug)]
 #[command(version, about, long_about = None)]
@@ -65,16 +70,32 @@ fn main() -> miette::Result<()> {
                 .into_diagnostic()
                 .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
 
-            match Parser::from_input(&file_contents) {
+            let source_text = SourceText::new(file_contents.clone());
+
+            let diagnostics_bag = DiagnosticsBagCell::new(RefCell::new(DiagnosticsBag::new()));
+            match Parser::from_input(
+                &file_contents, 
+                Rc::clone(&diagnostics_bag)
+            ) {
                 Ok(mut parser) => {
                     let mut ast = Ast::new();
                     while let Some(statement) = parser.next_statement() {
                         ast.add_statement(statement);
                     }
-                    ast.visualize();
-                    let mut eval = ASTEvaluator::new();
-                    ast.visit(&mut eval);
-                    println!("Result: {:?}", eval.last_value);
+                    let diagnostics_binding = diagnostics_bag.borrow();
+                    if diagnostics_binding.diagnostics.len() > 0 {
+                        let diagnostics_printer = DiagnosticPrinter::new(
+                            &source_text,
+                            &diagnostics_binding.diagnostics,
+                        );
+                        diagnostics_printer.print();
+                        any_cc_err = true;
+                    } else {
+                        ast.visualize();
+                        let mut eval = ASTEvaluator::new();
+                        ast.visit(&mut eval);
+                        println!("Result: {:?}", eval.last_value);
+                    }
                 }
                 Err(e) => {
                     // Use miette to report the error

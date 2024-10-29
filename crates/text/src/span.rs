@@ -14,7 +14,7 @@ impl<'de> TextSpan<'de> {
         }
     }
 
-    pub fn combine(spans: Vec<TextSpan<'de>>) -> TextSpan<'de> {
+    pub fn combine(_spans: Vec<TextSpan<'de>>) -> TextSpan<'de> {
         // TODO: This is a naive implementation
         todo!()
     }

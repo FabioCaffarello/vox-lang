@@ -1,8 +1,9 @@
 [package]
-name = "ast"
+name = "diagnostics"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lexer = { path = "../lexer" }
 text = { path = "../text" }
+lexer = { path = "../lexer" }
+termion = "4.0.3"

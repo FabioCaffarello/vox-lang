@@ -1,4 +1,5 @@
 use crate::ast::{ASTBinaryExpression, ASTBinaryOperatorKind, ASTNumberExpression, ASTVisitor};
+use text::span::TextSpan;
 
 pub struct ASTEvaluator {
     pub last_value: Option<f64>,
@@ -33,5 +34,9 @@ impl ASTVisitor for ASTEvaluator {
         parenthesized_expression: &crate::ast::ASTParenthesizedExpression,
     ) {
         self.visit_expression(&parenthesized_expression.expression);
+    }
+
+    fn visit_error(&mut self, _span: &TextSpan) {
+        panic!("Cannot evaluate error expression")
     }
 }
