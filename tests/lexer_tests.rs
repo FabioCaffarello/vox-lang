@@ -121,9 +121,9 @@ fn test_identifiers_and_keywords() {
     let expected_tokens = vec![
         create_token("and", 0, 3, TokenKind::And),
         create_token("nil", 4, 7, TokenKind::Nil),
-        create_token("variable_1", 8, 18, TokenKind::Ident),
-        create_token("_private", 19, 27, TokenKind::Ident),
-        create_token("var123", 28, 34, TokenKind::Ident),
+        create_token("variable_1", 8, 18, TokenKind::Identifier),
+        create_token("_private", 19, 27, TokenKind::Identifier),
+        create_token("var123", 28, 34, TokenKind::Identifier),
         create_token("or", 35, 37, TokenKind::Or),
         create_token("true", 38, 42, TokenKind::True),
         create_token("false", 43, 48, TokenKind::False),
@@ -367,8 +367,8 @@ fn test_whitespace_variations() {
 
     // Define expected tokens with correct byte positions
     let expected_tokens = vec![
-        create_token("let", 3, 6, TokenKind::Ident),
-        create_token("x", 7, 8, TokenKind::Ident),
+        create_token("let", 3, 6, TokenKind::Let),
+        create_token("x", 7, 8, TokenKind::Identifier),
         create_token("42", 9, 11, TokenKind::Number(42.0)),
     ];
 
@@ -396,7 +396,7 @@ fn test_block_comment_with_quotes() {
 
     let expected_tokens = vec![
         create_token("/*", 0, 43, TokenKind::BlockComment),
-        create_token("x", 44, 45, TokenKind::Ident),
+        create_token("x", 44, 45, TokenKind::Identifier),
         create_token("=", 46, 47, TokenKind::Equal),
         create_token("10", 48, 50, TokenKind::Number(10.0)),
     ];
@@ -451,7 +451,7 @@ Need to skip the entire block*/"#;
 
     let expected_tokens = vec![
         create_token("//", 0, 2, TokenKind::LineComment),
-        create_token("x", 33, 34, TokenKind::Ident),
+        create_token("x", 33, 34, TokenKind::Identifier),
         create_token("=", 35, 36, TokenKind::Equal),
         create_token("42", 37, 39, TokenKind::Number(42.0)),
         create_token(";", 39, 40, TokenKind::SemiColon),
@@ -524,7 +524,7 @@ fn test_block_comments_with_various_characters() {
 
     let expected_tokens = vec![
         create_token("/*", 0, 54, TokenKind::BlockComment),
-        create_token("identifier", 55, 65, TokenKind::Ident),
+        create_token("identifier", 55, 65, TokenKind::Identifier),
     ];
 
     for expected in expected_tokens {
@@ -579,11 +579,11 @@ fn test_adjacent_operators_and_punctuation() {
 
     // Define expected tokens with correct byte positions
     let expected_tokens = vec![
-        create_token("a", 0, 1, TokenKind::Ident),
+        create_token("a", 0, 1, TokenKind::Identifier),
         create_token("=", 1, 2, TokenKind::Equal),
-        create_token("b", 2, 3, TokenKind::Ident),
+        create_token("b", 2, 3, TokenKind::Identifier),
         create_token("+", 3, 4, TokenKind::Plus),
-        create_token("c", 4, 5, TokenKind::Ident),
+        create_token("c", 4, 5, TokenKind::Identifier),
         create_token(";", 5, 6, TokenKind::SemiColon),
     ];
 
@@ -610,8 +610,8 @@ fn test_identifiers_with_keywords() {
 
     // Define expected tokens with correct byte positions
     let expected_tokens = vec![
-        create_token("or_1", 0, 4, TokenKind::Ident),
-        create_token("and2", 5, 9, TokenKind::Ident),
+        create_token("or_1", 0, 4, TokenKind::Identifier),
+        create_token("and2", 5, 9, TokenKind::Identifier),
     ];
 
     for expected in expected_tokens {
@@ -639,15 +639,15 @@ fn test_complex_nested_expressions() {
     let expected_tokens = vec![
         create_token("(", 0, 1, TokenKind::LParen),
         create_token("(", 1, 2, TokenKind::LParen),
-        create_token("a", 2, 3, TokenKind::Ident),
+        create_token("a", 2, 3, TokenKind::Identifier),
         create_token("+", 4, 5, TokenKind::Plus),
-        create_token("b", 6, 7, TokenKind::Ident),
+        create_token("b", 6, 7, TokenKind::Identifier),
         create_token(")", 7, 8, TokenKind::RParen),
         create_token("*", 9, 10, TokenKind::Star),
         create_token("(", 11, 12, TokenKind::LParen),
-        create_token("c", 12, 13, TokenKind::Ident),
+        create_token("c", 12, 13, TokenKind::Identifier),
         create_token("-", 14, 15, TokenKind::Minus),
-        create_token("d", 16, 17, TokenKind::Ident),
+        create_token("d", 16, 17, TokenKind::Identifier),
         create_token(")", 17, 18, TokenKind::RParen),
         create_token(")", 18, 19, TokenKind::RParen),
     ];
@@ -687,8 +687,8 @@ fn test_collect_tokens_no_errors() {
 
     // Define expected tokens with correct byte positions
     let expected_tokens = vec![
-        create_token("let", 0, 3, TokenKind::Ident),
-        create_token("x", 4, 5, TokenKind::Ident),
+        create_token("let", 0, 3, TokenKind::Let),
+        create_token("x", 4, 5, TokenKind::Identifier),
         create_token("=", 6, 7, TokenKind::Equal),
         create_token("42", 8, 10, TokenKind::Number(42.0)),
         create_token(";", 10, 11, TokenKind::SemiColon),
@@ -728,9 +728,9 @@ fn test_collect_tokens_with_bad_tokens() {
 
     // Define expected tokens with correct byte positions
     let expected_tokens = vec![
-        create_token("let", 0, 3, TokenKind::Ident),
+        create_token("let", 0, 3, TokenKind::Let),
         create_token("@", 4, 5, TokenKind::Bad),
-        create_token("x", 5, 6, TokenKind::Ident),
+        create_token("x", 5, 6, TokenKind::Identifier),
         create_token("=", 7, 8, TokenKind::Equal),
         create_token("#", 9, 10, TokenKind::Bad),
         create_token("42", 10, 12, TokenKind::Number(42.0)),
@@ -829,7 +829,7 @@ fn test_token_display() {
         ),
         (TokenKind::Number(42.0), "42", 122, 124, "NUMBER 42 42.0"),
         (
-            TokenKind::Ident,
+            TokenKind::Identifier,
             "identifier",
             125,
             135,
@@ -884,6 +884,8 @@ fn test_token_display() {
         ),
         // EOF
         (TokenKind::EOF, "", 198, 198, "EOF  null"),
+        (TokenKind::Bad, "@", 199, 200, "BAD @ null"),
+        (TokenKind::Let, "let", 201, 204, "LET let null"),
     ];
 
     for (kind, literal, start, end, expected_display) in test_cases {

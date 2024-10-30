@@ -221,7 +221,8 @@ impl<'de> Lexer<'de> {
                 "typeOf" => TokenKind::TypeOf,
                 "range" => TokenKind::Range,
                 "concat" => TokenKind::Concatenate,
-                _ => TokenKind::Ident,
+                "let" => TokenKind::Let,
+                _ => TokenKind::Identifier,
             };
 
             Some(Ok(Token {

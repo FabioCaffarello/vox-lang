@@ -90,7 +90,6 @@ impl<'de> Parser<'de> {
     }
 
     fn consume_and_check(&self, kind: TokenKind) -> Token<'de> {
-        // FIXME: &Token<'de>
         let token = self.consume();
         if token.kind != kind {
             self.diagnostics_bag
@@ -112,6 +111,21 @@ impl<'de> Parser<'de> {
     }
 
     fn parse_statement(&mut self) -> ASTStatement<'de> {
+        match self.current().kind {
+            TokenKind::Let => self.parse_let_statement(),
+            _ => self.parse_expression_statement(),
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> ASTStatement<'de> {
+        self.consume_and_check(TokenKind::Let);
+        let identifier = self.consume_and_check(TokenKind::Identifier);
+        self.consume_and_check(TokenKind::Equal);
+        let expr = self.parse_expression();
+        return ASTStatement::let_statement(identifier.clone(), expr);
+    }
+
+    fn parse_expression_statement(&mut self) -> ASTStatement<'de> {
         let expr = self.parse_expression();
         return ASTStatement::expression(expr);
     }
@@ -150,6 +164,7 @@ impl<'de> Parser<'de> {
                 let _token = self.consume_and_check(TokenKind::RParen);
                 ASTExpression::parenthesized_expression(expr)
             }
+            TokenKind::Identifier => ASTExpression::identifier(token.clone()),
             _ => {
                 self.diagnostics_bag
                     .borrow_mut()

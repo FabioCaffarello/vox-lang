@@ -64,6 +64,11 @@ impl<'de> DiagnosticsBag<'de> {
         self.report_error(message, token.span);
     }
 
+    pub fn report_undefined_variable(&mut self, token: &Token<'de>) {
+        let message = format!("Undefined variable: <{}>", token.span.literal);
+        self.report_error(message, token.span);
+    }
+
     fn report(&mut self, message: String, span: TextSpan<'de>, kind: DiagnosticKind) {
         let diagnostic = Diagnostic::new(message, span, kind);
         self.diagnostics.push(diagnostic);
