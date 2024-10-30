@@ -171,6 +171,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
+name = "compiler"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "diagnostics",
+ "lexer",
+ "parser",
+ "text",
+]
+
+[[package]]
 name = "diagnostics"
 version = "0.1.0"
 dependencies = [
@@ -508,6 +519,7 @@ dependencies = [
  "bytes",
  "cargo-husky",
  "clap",
+ "compiler",
  "diagnostics",
  "lexer",
  "miette",
