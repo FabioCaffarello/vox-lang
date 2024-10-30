@@ -121,10 +121,12 @@ impl ASTPrinter {
         }
     }
 
+    #[allow(clippy::single_char_add_str)]
     fn add_whitespace(&mut self) {
         self.result.push_str(" ");
     }
 
+    #[allow(clippy::single_char_add_str)]
     fn _add_newline(&mut self) {
         self.result.push_str(
             "

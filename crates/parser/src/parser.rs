@@ -122,7 +122,7 @@ impl<'de> Parser<'de> {
         let identifier = self.consume_and_check(TokenKind::Identifier);
         self.consume_and_check(TokenKind::Equal);
         let expr = self.parse_expression();
-        return ASTStatement::let_statement(identifier.clone(), expr);
+        return ASTStatement::let_statement(identifier, expr);
     }
 
     fn parse_expression_statement(&mut self) -> ASTStatement<'de> {
@@ -164,7 +164,7 @@ impl<'de> Parser<'de> {
                 let _token = self.consume_and_check(TokenKind::RParen);
                 ASTExpression::parenthesized_expression(expr)
             }
-            TokenKind::Identifier => ASTExpression::identifier(token.clone()),
+            TokenKind::Identifier => ASTExpression::identifier(token),
             _ => {
                 self.diagnostics_bag
                     .borrow_mut()
