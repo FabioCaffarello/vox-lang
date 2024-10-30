@@ -9,7 +9,7 @@ pub struct DiagnosticPrinter<'a, 'de> {
     diagnostics: &'a [Diagnostic<'de>],
 }
 
-const PREFIX_LENGHT: usize = 8;
+const PREFIX_LENGTH: usize = 8;
 
 impl<'a, 'de> DiagnosticPrinter<'a, 'de> {
     pub fn new(text: &'a SourceText, diagnostics: &'a [Diagnostic<'de>]) -> Self {
@@ -25,22 +25,16 @@ impl<'a, 'de> DiagnosticPrinter<'a, 'de> {
     ///          |
     ///          +-- This is the error message (<line>:<column>)
     ///
-    pub fn stringify_diagnostic(&self, diagnostic: &Diagnostic<'de>) -> String {
+    pub fn stringify_diagnostic(&self, diagnostic: &Diagnostic) -> String {
         let line_index = self.text.line_index(diagnostic.span.start);
         let line = self.text.get_line(line_index);
         let line_start = self.text.line_start(line_index);
 
         let column = diagnostic.span.start - line_start;
-        let prefix_start = cmp::max(0, column as isize - PREFIX_LENGHT as isize) as usize;
-        let prefix_end = column;
-        let suffix_start = cmp::min(column + diagnostic.span.length(), line.len()) + 1;
-        let suffix_end = cmp::min(suffix_start + PREFIX_LENGHT, line.len());
 
-        let prefix = &line[prefix_start..prefix_end];
-        let span = &line[prefix_end..suffix_start];
-        let suffix = &line[suffix_start..suffix_end];
+        let (prefix, span, suffix) = self.get_text_spans(diagnostic, line, column);
 
-        let indent = cmp::min(PREFIX_LENGHT, column);
+        let indent = cmp::min(PREFIX_LENGTH, column);
         let (arrow_pointers, arrow_line) = Self::format_arrow(diagnostic, indent);
         let error_message = Self::format_error_message(diagnostic, indent, column, line_index);
         format!(
@@ -62,13 +56,27 @@ impl<'a, 'de> DiagnosticPrinter<'a, 'de> {
         }
     }
 
+    fn get_text_spans(
+        &'a self,
+        diagnostic: &Diagnostic,
+        line: &'a str,
+        column: usize,
+    ) -> (&'a str, &'a str, &'a str) {
+        let prefix_start = cmp::max(0, column as isize - PREFIX_LENGTH as isize) as usize;
+        let prefix_end = column;
+        let suffix_start = cmp::min(column + diagnostic.span.length(), line.len());
+        let suffix_end = cmp::min(suffix_start + PREFIX_LENGTH, line.len());
+
+        let prefix = &line[prefix_start..prefix_end];
+        let span = &line[prefix_end..suffix_start];
+        let suffix = &line[suffix_start..suffix_end];
+        (prefix, span, suffix)
+    }
+
     fn format_arrow(diagnostic: &Diagnostic, indent: usize) -> (String, String) {
         let arrow_pointers = format!(
             "{:indent$}{}",
             "",
-            // std::iter::repeat('^')
-            //     .take(diagnostic.span.length())
-            //     .collect::<String>(),
             "^".repeat(diagnostic.span.length()),
             indent = indent
         );

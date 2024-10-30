@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+diagnostics = { path = "../diagnostics" }
 lexer = { path = "../lexer" }
 text = { path = "../text" }
+termion = "4.0.3"

@@ -1,13 +1,22 @@
-use crate::ast::{ASTBinaryExpression, ASTBinaryOperatorKind, ASTNumberExpression, ASTVisitor};
+use std::collections::HashMap;
+
+use crate::ast::{
+    ASTBinaryExpression, ASTBinaryOperatorKind, ASTLetStatement, ASTNumberExpression,
+    ASTVariableExpression, ASTVisitor,
+};
 use text::span::TextSpan;
 
 pub struct ASTEvaluator {
     pub last_value: Option<f64>,
+    pub variables: HashMap<String, f64>,
 }
 
 impl ASTEvaluator {
     pub fn new() -> Self {
-        Self { last_value: None }
+        Self {
+            last_value: None,
+            variables: HashMap::new(),
+        }
     }
 }
 
@@ -17,8 +26,29 @@ impl Default for ASTEvaluator {
     }
 }
 
-impl ASTVisitor for ASTEvaluator {
-    fn visit_number_literal(&mut self, number: &ASTNumberExpression) {
+impl<'de> ASTVisitor<'de> for ASTEvaluator {
+    fn visit_let_statement(&mut self, let_statement: &ASTLetStatement) {
+        self.visit_expression(&let_statement.initializer);
+        self.variables.insert(
+            let_statement.identifier.span.literal.to_string(),
+            self.last_value.unwrap(),
+        );
+    }
+
+    fn visit_statement(&mut self, statement: &crate::ast::ASTStatement) {
+        self.do_visit_statement(statement);
+    }
+
+    fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression) {
+        self.last_value = Some(
+            *self
+                .variables
+                .get(variable_expression.identifier.span.literal)
+                .unwrap(),
+        );
+    }
+
+    fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
         self.last_value = Some(number.number);
     }
 

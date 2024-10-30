@@ -1,4 +1,5 @@
 use lexer::Token;
+use termion::color::{self, Fg, Reset};
 use text::span::TextSpan;
 
 pub struct Ast<'de> {
@@ -22,35 +23,41 @@ impl<'de> Ast<'de> {
         self.statements.push(statement);
     }
 
-    pub fn visit(&self, visitor: &mut dyn ASTVisitor) {
+    pub fn visit(&self, visitor: &mut dyn ASTVisitor<'de>) {
         for statement in &self.statements {
             visitor.visit_statement(statement);
         }
     }
 
     pub fn visualize(&self) {
-        let mut printer = ASTPrinter { indent: 0 };
+        let mut printer = ASTPrinter::new();
         self.visit(&mut printer);
+        println!("{}", printer.result);
     }
 }
 
-pub trait ASTVisitor {
-    fn do_visit_statement(&mut self, statement: &ASTStatement) {
+pub trait ASTVisitor<'de> {
+    fn do_visit_statement(&mut self, statement: &ASTStatement<'de>) {
         match &statement.kind {
             ASTStatementKind::Expression(expr) => {
                 self.visit_expression(expr);
             }
+            ASTStatementKind::LetStatement(expr) => {
+                self.visit_let_statement(expr);
+            }
         }
     }
 
-    fn visit_statement(&mut self, statement: &ASTStatement) {
+    fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>);
+
+    fn visit_statement(&mut self, statement: &ASTStatement<'de>) {
         self.do_visit_statement(statement);
     }
 
-    fn do_visit_expression(&mut self, expression: &ASTExpression) {
+    fn do_visit_expression(&mut self, expression: &ASTExpression<'de>) {
         match &expression.kind {
             ASTExpressionKind::NumberLiteral(number) => {
-                self.visit_number_literal(number);
+                self.visit_number_expression(number);
             }
             ASTExpressionKind::BinaryExpression(expr) => {
                 self.visit_binary_expression(expr);
@@ -61,88 +68,135 @@ pub trait ASTVisitor {
             ASTExpressionKind::Error(span) => {
                 self.visit_error(span);
             }
+            ASTExpressionKind::Variable(expr) => {
+                self.visit_variable_expression(expr);
+            }
         }
     }
 
-    fn visit_expression(&mut self, expression: &ASTExpression) {
+    fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression<'de>);
+
+    fn visit_expression(&mut self, expression: &ASTExpression<'de>) {
         self.do_visit_expression(expression);
     }
 
-    fn visit_number_literal(&mut self, number: &ASTNumberExpression);
+    fn visit_number_expression(&mut self, number: &ASTNumberExpression);
 
     fn visit_error(&mut self, span: &TextSpan);
 
-    fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression);
-
-    fn do_visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression) {
+    fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
         self.visit_expression(&binary_expression.left);
         self.visit_expression(&binary_expression.right);
     }
 
     fn visit_parenthesized_expression(
         &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression,
-    );
-
-    fn do_visit_parenthesized_expression(
-        &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression,
+        parenthesized_expression: &ASTParenthesizedExpression<'de>,
     ) {
         self.visit_expression(&parenthesized_expression.expression);
     }
 }
 
 pub struct ASTPrinter {
-    indent: usize,
+    _indent: usize,
+    result: String,
 }
 
-const LEVEL_INDENT: usize = 2;
+impl Default for ASTPrinter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-impl ASTVisitor for ASTPrinter {
-    fn visit_number_literal(&mut self, number: &ASTNumberExpression) {
-        self.print_with_indent(&format!("NumberLiteral: {}", number.number));
+impl ASTPrinter {
+    const NUMBER_COLOR: color::Cyan = color::Cyan;
+    const TEXT_COLOR: color::LightWhite = color::LightWhite;
+    const KEYWORD_COLOR: color::Magenta = color::Magenta;
+    const VARIABLE_COLOR: color::Green = color::Green;
+
+    pub fn new() -> Self {
+        Self {
+            _indent: 0,
+            result: String::new(),
+        }
+    }
+
+    #[allow(clippy::single_char_add_str)]
+    fn add_whitespace(&mut self) {
+        self.result.push_str(" ");
+    }
+
+    #[allow(clippy::single_char_add_str)]
+    fn _add_newline(&mut self) {
+        self.result.push_str(
+            "
+",
+        );
+    }
+}
+
+impl<'de> ASTVisitor<'de> for ASTPrinter {
+    fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
+        self.result
+            .push_str(&format!("{}{}", Self::NUMBER_COLOR.fg_str(), number.number));
     }
 
     fn visit_error(&mut self, span: &TextSpan) {
-        self.print_with_indent(&format!("Error: {:?}", span));
+        self.result
+            .push_str(&format!("{}{}", Self::TEXT_COLOR.fg_str(), span.literal));
     }
 
     fn visit_statement(&mut self, statement: &ASTStatement) {
-        self.print_with_indent("Statement:");
-        self.indent += LEVEL_INDENT;
         ASTVisitor::do_visit_statement(self, statement);
-        self.indent -= LEVEL_INDENT;
-    }
-
-    fn visit_expression(&mut self, expression: &ASTExpression) {
-        self.print_with_indent("Expression:");
-        self.indent += LEVEL_INDENT;
-        ASTVisitor::do_visit_expression(self, expression);
-        self.indent -= LEVEL_INDENT;
+        self.result.push_str(&format!("{}", Fg(Reset),));
     }
 
     fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression) {
-        self.print_with_indent("Binary Expression:");
-        self.indent += LEVEL_INDENT;
-        self.print_with_indent(&format!("Operator: {:?}", binary_expression.operator.kind));
-        ASTVisitor::do_visit_binary_expression(self, binary_expression);
-        self.indent -= LEVEL_INDENT;
+        self.visit_expression(&binary_expression.left);
+        self.add_whitespace();
+        self.result.push_str(&format!(
+            "{}{}",
+            Self::TEXT_COLOR.fg_str(),
+            binary_expression.operator.token.span.literal,
+        ));
+        self.add_whitespace();
+        self.visit_expression(&binary_expression.right);
     }
 
     fn visit_parenthesized_expression(
         &mut self,
         parenthesized_expression: &ASTParenthesizedExpression,
     ) {
-        self.print_with_indent("Parenthesized Expression:");
-        self.indent += LEVEL_INDENT;
-        ASTVisitor::do_visit_parenthesized_expression(self, parenthesized_expression);
-        self.indent -= LEVEL_INDENT;
+        self.result
+            .push_str(&format!("{}{}", Self::TEXT_COLOR.fg_str(), "(",));
+        self.visit_expression(&parenthesized_expression.expression);
+        self.result
+            .push_str(&format!("{}{}", Self::TEXT_COLOR.fg_str(), ")",));
     }
-}
 
-impl ASTPrinter {
-    pub fn print_with_indent(&self, text: &str) {
-        println!("{}{}", " ".repeat(self.indent), text);
+    fn visit_let_statement(&mut self, let_statement: &ASTLetStatement) {
+        self.result
+            .push_str(&format!("{}{}", Self::KEYWORD_COLOR.fg_str(), "let"));
+        self.add_whitespace();
+        self.result.push_str(&format!(
+            "{}{}",
+            Self::TEXT_COLOR.fg_str(),
+            let_statement.identifier.span.literal,
+        ));
+        self.add_whitespace();
+        self.result
+            .push_str(&format!("{}{}", Self::TEXT_COLOR.fg_str(), "=",));
+        self.add_whitespace();
+        self.visit_expression(&let_statement.initializer);
+        self.add_whitespace(); // FIXME: This is a hack to make the output look better
+    }
+
+    fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression) {
+        self.result.push_str(&format!(
+            "{}{}",
+            Self::VARIABLE_COLOR.fg_str(),
+            variable_expression.identifier.span.literal,
+        ));
     }
 }
 
@@ -164,15 +218,12 @@ pub enum ASTBinaryOperatorKind {
 
 pub struct ASTBinaryOperator<'de> {
     pub kind: ASTBinaryOperatorKind,
-    _token: Token<'de>,
+    token: Token<'de>,
 }
 
 impl<'de> ASTBinaryOperator<'de> {
     pub fn new(kind: ASTBinaryOperatorKind, token: Token<'de>) -> Self {
-        ASTBinaryOperator {
-            kind,
-            _token: token,
-        }
+        ASTBinaryOperator { kind, token }
     }
 
     pub fn precedence(&self) -> u8 {
@@ -193,6 +244,12 @@ pub struct ASTBinaryExpression<'de> {
 
 pub enum ASTStatementKind<'de> {
     Expression(ASTExpression<'de>),
+    LetStatement(ASTLetStatement<'de>),
+}
+
+pub struct ASTLetStatement<'de> {
+    pub identifier: Token<'de>,
+    pub initializer: ASTExpression<'de>,
 }
 
 pub struct ASTStatement<'de> {
@@ -207,6 +264,13 @@ impl<'de> ASTStatement<'de> {
     pub fn expression(expr: ASTExpression<'de>) -> Self {
         ASTStatement::new(ASTStatementKind::Expression(expr))
     }
+
+    pub fn let_statement(identifier: Token<'de>, initializer: ASTExpression<'de>) -> Self {
+        ASTStatement::new(ASTStatementKind::LetStatement(ASTLetStatement {
+            identifier,
+            initializer,
+        }))
+    }
 }
 
 pub enum ASTExpressionKind<'de> {
@@ -214,6 +278,17 @@ pub enum ASTExpressionKind<'de> {
     BinaryExpression(ASTBinaryExpression<'de>),
     ParenthesizedExpression(ASTParenthesizedExpression<'de>),
     Error(TextSpan<'de>),
+    Variable(ASTVariableExpression<'de>),
+}
+
+pub struct ASTVariableExpression<'de> {
+    pub identifier: Token<'de>,
+}
+
+impl<'de> ASTVariableExpression<'de> {
+    pub fn identifier(&self) -> &str {
+        self.identifier.span.literal
+    }
 }
 
 pub struct ASTExpression<'de> {
@@ -253,5 +328,11 @@ impl<'de> ASTExpression<'de> {
 
     pub fn error(span: TextSpan<'de>) -> Self {
         ASTExpression::new(ASTExpressionKind::Error(span))
+    }
+
+    pub fn identifier(identifier: Token<'de>) -> Self {
+        ASTExpression::new(ASTExpressionKind::Variable(ASTVariableExpression {
+            identifier,
+        }))
     }
 }

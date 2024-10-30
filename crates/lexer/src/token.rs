@@ -42,7 +42,8 @@ pub enum TokenKind {
     Extract,
 
     // Literals
-    Ident,
+    Identifier,
+    Let,
 
     // Built-in Functions
     Length,
@@ -111,7 +112,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Nil => write!(f, "NIL"),
             TokenKind::String => write!(f, "STRING"),
             TokenKind::Number(_) => write!(f, "NUMBER"),
-            TokenKind::Ident => write!(f, "IDENTIFIER"),
+            TokenKind::Identifier => write!(f, "IDENTIFIER"),
             TokenKind::Length => write!(f, "LENGTH"),
             TokenKind::TypeOf => write!(f, "TYPE_OF"),
             TokenKind::Range => write!(f, "RANGE"),
@@ -129,6 +130,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Extract => write!(f, "EXTRACT"),
             TokenKind::LineComment => write!(f, "LINE_COMMENT"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT"),
+            TokenKind::Let => write!(f, "LET"),
             TokenKind::Bad => write!(f, "BAD"),
             TokenKind::EOF => write!(f, "EOF"),
         }
@@ -189,7 +191,8 @@ impl fmt::Display for Token<'_> {
                 }
             }
             // Literals
-            TokenKind::Ident => write!(f, "IDENTIFIER {literal} null"),
+            TokenKind::Identifier => write!(f, "IDENTIFIER {literal} null"),
+            TokenKind::Let => write!(f, "LET {literal} null"),
             // Built-in Functions
             TokenKind::Length => write!(f, "LENGTH {literal} null"),
             TokenKind::TypeOf => write!(f, "TYPE_OF {literal} null"),

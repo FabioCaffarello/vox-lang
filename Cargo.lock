@@ -70,7 +70,9 @@ dependencies = [
 name = "ast"
 version = "0.1.0"
 dependencies = [
+ "diagnostics",
  "lexer",
+ "termion",
  "text",
 ]
 
