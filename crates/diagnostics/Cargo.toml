@@ -1,9 +1,9 @@
 [package]
-name = "lexer"
+name = "diagnostics"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 text = { path = "../text" }
-miette = { version = "7.2.0", features = ["fancy"] }
-thiserror = "1.0.63"
+lexer = { path = "../lexer" }
+termion = "4.0.3"

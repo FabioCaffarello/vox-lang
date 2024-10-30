@@ -36,6 +36,10 @@ coverage:
 	@echo "Running tests with coverage using cargo tarpaulin"
 	cargo tarpaulin --locked --all-features --out Lcov
 
+run-example:
+	@echo "Running example"
+	cargo run -- tokenize ./examples/temp.vox
+
 # Run all steps: format, lint, and test
 all: format lint test
 	@echo "Completed format, lint, and test steps"

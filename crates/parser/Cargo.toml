@@ -1,9 +1,11 @@
 [package]
-name = "lexer"
+name = "parser"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-text = { path = "../text" }
+ast = { path = "../ast" }
+diagnostics = { path = "../diagnostics" }
+lexer = { path = "../lexer" }
 miette = { version = "7.2.0", features = ["fancy"] }
 thiserror = "1.0.63"
