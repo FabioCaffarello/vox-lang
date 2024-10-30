@@ -70,7 +70,7 @@ pub enum TokenKind {
     // Comments
     LineComment,
     BlockComment,
-
+    Bad,
     EOF,
 }
 
@@ -129,6 +129,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Extract => write!(f, "EXTRACT"),
             TokenKind::LineComment => write!(f, "LINE_COMMENT"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT"),
+            TokenKind::Bad => write!(f, "BAD"),
             TokenKind::EOF => write!(f, "EOF"),
         }
     }
@@ -212,7 +213,7 @@ impl fmt::Display for Token<'_> {
             // Comments
             TokenKind::LineComment => write!(f, "LINE_COMMENT {literal} null"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT {literal} null"),
-
+            TokenKind::Bad => write!(f, "BAD {literal} null"),
             TokenKind::EOF => write!(f, "EOF {literal} null"),
         }
     }

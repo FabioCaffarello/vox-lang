@@ -1,4 +1,4 @@
-use crate::errors::{SingleTokenError, StringTerminationError};
+use crate::errors::StringTerminationError;
 use crate::token::{Token, TokenKind};
 use miette::{Error, LabeledSpan, Report, SourceSpan};
 use text::span::TextSpan;
@@ -412,11 +412,7 @@ impl<'de> Iterator for Lexer<'de> {
             }
 
             // Handle unrecognized tokens
-            return Some(Err(Report::new(SingleTokenError {
-                src: self.whole.to_string(),
-                token: c,
-                err_span: SourceSpan::from(start..end),
-            })));
+            return self.just(TokenKind::Bad, start, end);
         }
     }
 }

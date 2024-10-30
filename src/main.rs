@@ -40,14 +40,7 @@ fn main() -> miette::Result<()> {
                     Ok(t) => t,
                     Err(e) => {
                         eprintln!("{e:?}");
-                        if let Some(unrecognized) = e.downcast_ref::<lexer::SingleTokenError>() {
-                            any_cc_err = true;
-                            eprintln!(
-                                "[line {}] Error: Unexpected character: {}",
-                                unrecognized.line(),
-                                unrecognized.token
-                            );
-                        } else if let Some(unterminated) =
+                        if let Some(unterminated) =
                             e.downcast_ref::<lexer::StringTerminationError>()
                         {
                             any_cc_err = true;

@@ -1,4 +1,4 @@
-use lexer::errors::{SingleTokenError, StringTerminationError};
+use lexer::errors::StringTerminationError;
 use lexer::{Lexer, Token, TokenKind};
 use text::span::TextSpan;
 
@@ -36,22 +36,22 @@ fn assert_eof<'de>(lexer: &mut Lexer<'de>, byte: usize) {
 }
 
 #[test]
-fn test_single_token_error() {
+fn test_single_bad_token() {
     let input = "@";
     let mut lexer = Lexer::new(input);
 
     let token_result = lexer.next();
-    assert!(token_result.is_some(), "Expected an error but got None");
-    let error = token_result.unwrap().unwrap_err();
+    let expected_token = create_token("@", 0, 1, TokenKind::Bad);
 
-    // Assert that the error is of type SingleTokenError
-    if let Some(single_token_error) = error.downcast_ref::<SingleTokenError>() {
-        assert_eq!(single_token_error.token, '@', "Unexpected token character");
-        // Assuming `SingleTokenError` has a method `line()` to get the line number
-        assert_eq!(single_token_error.line(), 1, "Error should be on line 1");
-    } else {
-        panic!("Expected SingleTokenError, got {}", error);
-    }
+    assert!(token_result.is_some(), "Expected a token but got None");
+    let token = token_result.unwrap();
+    assert!(token.is_ok(), "Expected Ok(Token) but got Err");
+    let token = token.unwrap();
+    assert_eq!(
+        token, expected_token,
+        "Token does not match expected value. Expected: {:?}, Got: {:?}",
+        expected_token, token
+    );
 }
 
 #[test]
@@ -495,42 +495,33 @@ Need to skip the entire block*/"#;
 fn test_unrecognized_characters() {
     let input = "@ # $ ^ &";
     let mut lexer = Lexer::new(input);
-    let mut errors_found = 0;
+    let (tokens, errors) = lexer.collect_tokens();
 
-    // Define expected positions for unrecognized characters
-    let unrecognized_positions = vec![
-        ('@', 0, 1),
-        ('#', 2, 3),
-        ('$', 4, 5),
-        ('^', 6, 7),
-        ('&', 8, 9),
-    ];
-
-    for &(char, start, end) in &unrecognized_positions {
-        let token_result = lexer.next();
-        assert!(token_result.is_some(), "Expected an error but got None");
-        let error = token_result.unwrap().unwrap_err();
-        let error_message = format!("{}", error);
-
-        // Assert that the error is of type SingleTokenError
-        if let Some(single_token_error) = error.downcast_ref::<SingleTokenError>() {
-            assert_eq!(single_token_error.token, char, "Unexpected token character");
-            // Assuming `SingleTokenError` has a method `line()` to get the line number
-            assert_eq!(single_token_error.line(), 1, "Error should be on line 1");
-            errors_found += 1;
-        } else {
-            panic!("Expected SingleTokenError, got {}", error);
-        }
-    }
-
+    // Ensure there are errors
     assert_eq!(
-        errors_found, 5,
-        "Expected 5 errors for unrecognized characters, found {}",
-        errors_found
+        errors.len(),
+        0,
+        "Expected two errors for unrecognized characters, found {}",
+        errors.len()
     );
 
-    // After errors, expect EOF
-    assert_eof(&mut lexer, 9);
+    // Define expected tokens with correct byte positions
+    let expected_tokens = vec![
+        create_token("@", 0, 1, TokenKind::Bad),
+        create_token("#", 2, 3, TokenKind::Bad),
+        create_token("$", 4, 5, TokenKind::Bad),
+        create_token("^", 6, 7, TokenKind::Bad),
+        create_token("&", 8, 9, TokenKind::Bad),
+    ];
+
+    let token_iter = tokens.iter();
+    for (expected, actual) in expected_tokens.iter().zip(token_iter) {
+        assert_eq!(
+            expected, actual,
+            "Token does not match expected value. Expected: {:?}, Got: {:?}",
+            expected, actual
+        );
+    }
 }
 
 #[test]
@@ -729,7 +720,7 @@ fn test_collect_tokens_no_errors() {
 }
 
 #[test]
-fn test_collect_tokens_with_errors() {
+fn test_collect_tokens_with_bad_tokens() {
     let input = "let @x = #42;";
     let mut lexer = Lexer::new(input);
     let (tokens, errors) = lexer.collect_tokens();
@@ -737,7 +728,7 @@ fn test_collect_tokens_with_errors() {
     // Ensure there are errors
     assert_eq!(
         errors.len(),
-        2,
+        0,
         "Expected two errors for unrecognized characters, found {}",
         errors.len()
     );
@@ -745,10 +736,10 @@ fn test_collect_tokens_with_errors() {
     // Define expected tokens with correct byte positions
     let expected_tokens = vec![
         create_token("let", 0, 3, TokenKind::Ident),
-        // '@' is an invalid character, error occurs here
+        create_token("@", 4, 5, TokenKind::Bad),
         create_token("x", 5, 6, TokenKind::Ident),
         create_token("=", 7, 8, TokenKind::Equal),
-        // '#' is an invalid character, error occurs here
+        create_token("#", 9, 10, TokenKind::Bad),
         create_token("42", 10, 12, TokenKind::Number(42.0)),
         create_token(";", 12, 13, TokenKind::SemiColon),
         create_token("", 13, 13, TokenKind::EOF), // EOF token
@@ -760,23 +751,6 @@ fn test_collect_tokens_with_errors() {
             expected, actual,
             "Token does not match expected value. Expected: {:?}, Got: {:?}",
             expected, actual
-        );
-    }
-
-    // Check error messages
-    assert_eq!(
-        errors.len(),
-        2,
-        "Expected two errors, but found {}",
-        errors.len()
-    );
-
-    for error in errors {
-        let error_message = format!("{}", error);
-        assert!(
-            error_message.contains("Unexpected token"),
-            "Expected an unrecognized token error, got: {}",
-            error_message
         );
     }
 }
@@ -802,50 +776,6 @@ fn test_collect_tokens_empty_input() {
         "Tokens do not match expected. Expected: {:?}, Got: {:?}",
         expected_tokens, tokens
     );
-}
-
-#[test]
-fn test_collect_tokens_multiple_errors() {
-    let input = "let @x = #42;";
-    let mut lexer = Lexer::new(input);
-    let (tokens, errors) = lexer.collect_tokens();
-
-    // Ensure there are two errors
-    assert_eq!(
-        errors.len(),
-        2,
-        "Expected two errors, but found {}",
-        errors.len()
-    );
-
-    // Define expected tokens with correct byte positions
-    let expected_tokens = vec![
-        create_token("let", 0, 3, TokenKind::Ident),
-        create_token("x", 5, 6, TokenKind::Ident),
-        create_token("=", 7, 8, TokenKind::Equal),
-        create_token("42", 10, 12, TokenKind::Number(42.0)),
-        create_token(";", 12, 13, TokenKind::SemiColon),
-        create_token("", 13, 13, TokenKind::EOF),
-    ];
-
-    let token_iter = tokens.iter();
-    for (expected, actual) in expected_tokens.iter().zip(token_iter) {
-        assert_eq!(
-            expected, actual,
-            "Token does not match expected value. Expected: {:?}, Got: {:?}",
-            expected, actual
-        );
-    }
-
-    // Check error messages
-    for error in errors {
-        let error_message = format!("{}", error);
-        assert!(
-            error_message.contains("Unexpected token"),
-            "Expected an unrecognized token error, got: {}",
-            error_message
-        );
-    }
 }
 
 #[test]

@@ -1,4 +1,3 @@
-use core::panic;
 use std::cell::Cell;
 
 use crate::errors::ParserError;
@@ -143,7 +142,7 @@ impl<'de> Parser<'de> {
             TokenKind::Number(number) => ASTExpression::number_literal(number),
             TokenKind::LParen => {
                 let expr = self.parse_expression();
-                let token = self.consume_and_check(TokenKind::RParen);
+                let _token = self.consume_and_check(TokenKind::RParen);
                 ASTExpression::parenthesized_expression(expr)
             }
             _ => {
