@@ -10,6 +10,12 @@ pub struct Counter {
     value: Cell<usize>,
 }
 
+impl Default for Counter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Counter {
     pub fn new() -> Self {
         Self {
@@ -41,7 +47,7 @@ impl<'de> Parser<'de> {
                 .filter(|token| {
                     token.kind != TokenKind::LineComment && token.kind != TokenKind::BlockComment
                 })
-                .map(|token| token.clone())
+                .copied()
                 .collect(),
             current: Counter::new(),
             diagnostics_bag,
@@ -80,7 +86,7 @@ impl<'de> Parser<'de> {
 
     fn consume(&self) -> Token<'de> {
         self.current.increment();
-        self.peek(-1).clone()
+        *self.peek(-1)
     }
 
     fn consume_and_check(&self, kind: TokenKind) -> Token<'de> {
@@ -91,7 +97,7 @@ impl<'de> Parser<'de> {
                 .borrow_mut()
                 .report_unexpected_token(&kind, &token);
         }
-        return token;
+        token
     }
 
     pub fn next_statement(&mut self) -> Option<ASTStatement<'de>> {
@@ -132,8 +138,7 @@ impl<'de> Parser<'de> {
                 break 'outer;
             }
         } {}
-
-        return left;
+        left
     }
 
     fn parse_primary_expression(&mut self) -> ASTExpression<'de> {
@@ -149,13 +154,13 @@ impl<'de> Parser<'de> {
                 self.diagnostics_bag
                     .borrow_mut()
                     .report_unexpected_expression(&token);
-                ASTExpression::error(token.span.clone())
+                ASTExpression::error(token.span)
             }
         }
     }
 
     fn parse_binary_operator(&mut self) -> Option<ASTBinaryOperator<'de>> {
-        let token = self.current().clone();
+        let token = *self.current();
         let kind = match token.kind {
             TokenKind::Plus => Some(ASTBinaryOperatorKind::Plus),
             TokenKind::Minus => Some(ASTBinaryOperatorKind::Subtract),

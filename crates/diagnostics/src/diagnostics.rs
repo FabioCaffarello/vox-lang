@@ -30,6 +30,12 @@ pub struct DiagnosticsBag<'de> {
 
 pub type DiagnosticsBagCell<'de> = Rc<RefCell<DiagnosticsBag<'de>>>;
 
+impl Default for DiagnosticsBag<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'de> DiagnosticsBag<'de> {
     pub fn new() -> Self {
         Self {
@@ -50,12 +56,12 @@ impl<'de> DiagnosticsBag<'de> {
             "Unexpected token: expected '{}', found '{}'",
             expected, token.kind
         );
-        self.report_error(message, token.span.clone());
+        self.report_error(message, token.span);
     }
 
     pub fn report_unexpected_expression(&mut self, token: &Token<'de>) {
         let message = format!("Expected expression, found <{}>", token.kind);
-        self.report_error(message, token.span.clone());
+        self.report_error(message, token.span);
     }
 
     fn report(&mut self, message: String, span: TextSpan<'de>, kind: DiagnosticKind) {

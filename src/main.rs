@@ -73,7 +73,7 @@ fn main() -> miette::Result<()> {
                         ast.add_statement(statement);
                     }
                     let diagnostics_binding = diagnostics_bag.borrow();
-                    if diagnostics_binding.diagnostics.len() > 0 {
+                    if !diagnostics_binding.diagnostics.is_empty() {
                         let diagnostics_printer =
                             DiagnosticPrinter::new(&source_text, &diagnostics_binding.diagnostics);
                         diagnostics_printer.print();

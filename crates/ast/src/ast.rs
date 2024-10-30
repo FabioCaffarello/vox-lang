@@ -5,6 +5,12 @@ pub struct Ast<'de> {
     pub statements: Vec<ASTStatement<'de>>,
 }
 
+impl Default for Ast<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'de> Ast<'de> {
     pub fn new() -> Self {
         Self {
@@ -22,7 +28,7 @@ impl<'de> Ast<'de> {
         }
     }
 
-    pub fn visualize(&self) -> () {
+    pub fn visualize(&self) {
         let mut printer = ASTPrinter { indent: 0 };
         self.visit(&mut printer);
     }

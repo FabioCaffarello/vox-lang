@@ -66,9 +66,10 @@ impl<'a, 'de> DiagnosticPrinter<'a, 'de> {
         let arrow_pointers = format!(
             "{:indent$}{}",
             "",
-            std::iter::repeat('^')
-                .take(diagnostic.span.length())
-                .collect::<String>(),
+            // std::iter::repeat('^')
+            //     .take(diagnostic.span.length())
+            //     .collect::<String>(),
+            "^".repeat(diagnostic.span.length()),
             indent = indent
         );
         let arrow_line = format!("{:indent$}|", "", indent = indent);

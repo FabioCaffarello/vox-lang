@@ -3,7 +3,7 @@ use lexer::{Lexer, Token, TokenKind};
 use text::span::TextSpan;
 
 // Helper function to create tokens
-fn create_token<'de>(literal: &'de str, start: usize, end: usize, kind: TokenKind) -> Token<'de> {
+fn create_token(literal: &str, start: usize, end: usize, kind: TokenKind) -> Token<'_> {
     Token {
         kind,
         span: TextSpan::new(start, end, literal),
@@ -11,7 +11,7 @@ fn create_token<'de>(literal: &'de str, start: usize, end: usize, kind: TokenKin
 }
 
 // Helper function to assert EOF token
-fn assert_eof<'de>(lexer: &mut Lexer<'de>, byte: usize) {
+fn assert_eof(lexer: &mut Lexer<'_>, byte: usize) {
     // Expect EOF token
     let token_result = lexer.next();
     assert!(token_result.is_some(), "Expected EOF token but got None");
@@ -294,13 +294,6 @@ fn test_numbers() {
 fn test_strings() {
     let input = r#""hello" "world" "unterminated"#; // Removed closing quote for the last string
     let mut lexer = Lexer::new(input);
-
-    // Define expected tokens with correct byte positions and literals
-    let expected_tokens = vec![
-        create_token("\"hello\"", 0, 7, TokenKind::String),
-        create_token("\"world\"", 8, 15, TokenKind::String),
-        // The third string is unterminated; expect an error
-    ];
 
     // First string
     let token1 = lexer.next();

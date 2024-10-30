@@ -22,6 +22,7 @@ impl<'de> Lexer<'de> {
         }
     }
 
+    #[allow(clippy::while_let_on_iterator)]
     pub fn collect_tokens(&mut self) -> (Vec<Token<'de>>, Vec<Report>) {
         let mut tokens = Vec::new();
         let mut errors = Vec::new();
@@ -351,68 +352,66 @@ impl<'de> Iterator for Lexer<'de> {
             return Some(next);
         }
 
-        loop {
-            // Skip over any whitespace
-            while let Some(c) = self.rest.chars().next() {
-                if c.is_whitespace() {
-                    self.byte += c.len_utf8();
-                    self.rest = &self.rest[c.len_utf8()..];
-                } else {
-                    break;
-                }
+        // Skip over any whitespace
+        while let Some(c) = self.rest.chars().next() {
+            if c.is_whitespace() {
+                self.byte += c.len_utf8();
+                self.rest = &self.rest[c.len_utf8()..];
+            } else {
+                break;
             }
-
-            // Check if we've reached the end of input
-            if self.rest.is_empty() {
-                if !self.emitted_eof {
-                    self.emitted_eof = true;
-                    return Some(Ok(Token {
-                        kind: TokenKind::EOF,
-                        span: TextSpan::new(self.byte, self.byte, ""),
-                    }));
-                } else {
-                    return None;
-                }
-            }
-
-            let c = self.rest.chars().next().unwrap();
-            let start = self.byte;
-            let end = start + c.len_utf8();
-            self.rest = &self.rest[c.len_utf8()..];
-            self.byte += c.len_utf8();
-
-            // Match punctuators and delimiters
-            if let Some(kind) = self.match_punctuator(c, start, end) {
-                return Some(kind);
-            }
-
-            // Match arithmetic operators, handling comments or division
-            if let Some(kind) = self.match_arithmetic(c, start, end) {
-                return Some(kind);
-            }
-
-            // Match comparison operators
-            if let Some(kind) = self.match_comparison(c, start, end) {
-                return Some(kind);
-            }
-
-            // Match identifiers and keywords
-            if let Some(kind) = self.match_identifier_keyword(c) {
-                return Some(kind);
-            }
-
-            // Match string literals
-            if let Some(kind) = self.match_string(c) {
-                return Some(kind);
-            }
-
-            // Match numbers
-            if let Some(kind) = self.match_number(c) {
-                return Some(kind);
-            }
-
-            // Handle unrecognized tokens
-            return self.just(TokenKind::Bad, start, end);
         }
+
+        // Check if we've reached the end of input
+        if self.rest.is_empty() {
+            if !self.emitted_eof {
+                self.emitted_eof = true;
+                return Some(Ok(Token {
+                    kind: TokenKind::EOF,
+                    span: TextSpan::new(self.byte, self.byte, ""),
+                }));
+            } else {
+                return None;
+            }
+        }
+
+        let c = self.rest.chars().next().unwrap();
+        let start = self.byte;
+        let end = start + c.len_utf8();
+        self.rest = &self.rest[c.len_utf8()..];
+        self.byte += c.len_utf8();
+
+        // Match punctuators and delimiters
+        if let Some(kind) = self.match_punctuator(c, start, end) {
+            return Some(kind);
+        }
+
+        // Match arithmetic operators, handling comments or division
+        if let Some(kind) = self.match_arithmetic(c, start, end) {
+            return Some(kind);
+        }
+
+        // Match comparison operators
+        if let Some(kind) = self.match_comparison(c, start, end) {
+            return Some(kind);
+        }
+
+        // Match identifiers and keywords
+        if let Some(kind) = self.match_identifier_keyword(c) {
+            return Some(kind);
+        }
+
+        // Match string literals
+        if let Some(kind) = self.match_string(c) {
+            return Some(kind);
+        }
+
+        // Match numbers
+        if let Some(kind) = self.match_number(c) {
+            return Some(kind);
+        }
+
+        // Handle unrecognized tokens
+        return self.just(TokenKind::Bad, start, end);
     }
 }

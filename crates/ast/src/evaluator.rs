@@ -11,6 +11,12 @@ impl ASTEvaluator {
     }
 }
 
+impl Default for ASTEvaluator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ASTVisitor for ASTEvaluator {
     fn visit_number_literal(&mut self, number: &ASTNumberExpression) {
         self.last_value = Some(number.number);
