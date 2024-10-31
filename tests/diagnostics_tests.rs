@@ -105,3 +105,39 @@ fn should_report_undeclared_variable() {
 
     assert_diagnostics(input, raw, expected);
 }
+
+#[test]
+fn should_report_expected_expression() {
+    let input = "let a = «+»";
+    let raw = "let a = +";
+    let expected = vec!["Expected expression, found <+>"];
+
+    assert_diagnostics(input, raw, expected);
+
+    let input = "let a = «-»";
+    let raw = "let a = -";
+    let expected = vec!["Expected expression, found <->"];
+
+    assert_diagnostics(input, raw, expected);
+
+    let input = "let a = «*»";
+    let raw = "let a = *";
+    let expected = vec!["Expected expression, found <*>"];
+
+    assert_diagnostics(input, raw, expected);
+
+    let input = "let a = «/»";
+    let raw = "let a = /";
+    let expected = vec!["Expected expression, found </>"];
+
+    assert_diagnostics(input, raw, expected);
+}
+
+#[test]
+fn should_report_unexpected_token() {
+    let input = "let a = 10 «@» 1";
+    let raw = "let a = 10 @ 1";
+    let expected = vec!["Expected expression, found <BAD>"];
+
+    assert_diagnostics(input, raw, expected);
+}

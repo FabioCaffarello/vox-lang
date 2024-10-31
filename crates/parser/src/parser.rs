@@ -140,11 +140,11 @@ impl<'de> Parser<'de> {
         'outer: while {
             let operator = self.parse_binary_operator();
             if let Some(operator) = operator {
-                self.consume();
                 let operator_precedence = operator.precedence();
                 if operator_precedence < precedence {
                     break 'outer;
                 }
+                self.consume();
                 let right = self.parse_binary_expression(operator_precedence);
                 left = ASTExpression::binary_expression(left, operator, right);
                 true
