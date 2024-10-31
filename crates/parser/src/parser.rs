@@ -1,7 +1,10 @@
 use std::cell::Cell;
 
 use crate::errors::ParserError;
-use ast::{ast::ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTStatement};
+use ast::{
+    ast::ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTStatement, ASTUnaryOperator,
+    ASTUnaryOperatorKind,
+};
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
@@ -135,7 +138,7 @@ impl<'de> Parser<'de> {
     }
 
     fn parse_binary_expression(&mut self, precedence: u8) -> ASTExpression<'de> {
-        let mut left = self.parse_primary_expression();
+        let mut left = self.parse_unary_expression();
 
         'outer: while {
             let operator = self.parse_binary_operator();
@@ -155,6 +158,15 @@ impl<'de> Parser<'de> {
         left
     }
 
+    fn parse_unary_expression(&mut self) -> ASTExpression<'de> {
+        if let Some(operator) = self.parse_unary_operator() {
+            self.consume();
+            let operand = self.parse_expression();
+            return ASTExpression::unary_expression(operator, operand);
+        }
+        return self.parse_primary_expression();
+    }
+
     fn parse_primary_expression(&mut self) -> ASTExpression<'de> {
         let token = self.consume();
         match token.kind {
@@ -172,6 +184,16 @@ impl<'de> Parser<'de> {
                 ASTExpression::error(token.span)
             }
         }
+    }
+
+    fn parse_unary_operator(&mut self) -> Option<ASTUnaryOperator<'de>> {
+        let token = *self.current();
+        let kind = match token.kind {
+            TokenKind::Minus => Some(ASTUnaryOperatorKind::Minus),
+            _ => None,
+        };
+
+        return kind.map(|kind| ASTUnaryOperator::new(kind, token));
     }
 
     fn parse_binary_operator(&mut self) -> Option<ASTBinaryOperator<'de>> {
