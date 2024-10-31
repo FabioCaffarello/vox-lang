@@ -18,12 +18,12 @@ impl<'de> DiagnosticsVerifier<'de> {
         let messages_len = messages.len();
         let expected = Self::parse_input(input, messages);
         assert_eq!(expected.len(), messages_len);
-        let actual = Self::compile(raw); // Pass `input` directly
+        let actual = Self::compile(raw);
         Self { expected, actual }
     }
 
     fn compile(input: &'de str) -> Vec<Diagnostic<'de>> {
-        let compilation_unit = CompilationUnit::compile(input); // Pass `input` directly
+        let compilation_unit = CompilationUnit::compile(input);
         match compilation_unit {
             Ok(_) => vec![],
             Err(e) => e.diagnostics.clone(),
@@ -31,7 +31,7 @@ impl<'de> DiagnosticsVerifier<'de> {
     }
 
     fn get_raw_text(input: &'de str) -> String {
-        input.replace("«", "").replace("»", "") // Returns `String`
+        input.replace("«", "").replace("»", "")
     }
 
     fn parse_input(input: &'de str, messages: Vec<&str>) -> Vec<Diagnostic<'de>> {
