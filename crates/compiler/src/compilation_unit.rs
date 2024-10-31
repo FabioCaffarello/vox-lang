@@ -11,7 +11,7 @@ use text::source::SourceText;
 #[derive(Debug)]
 pub struct CompilationUnit<'de> {
     pub ast: Ast<'de>,
-    _diagnostics_bag: DiagnosticsBagCell<'de>,
+    pub diagnostics_bag: DiagnosticsBagCell<'de>,
 }
 
 impl<'de> CompilationUnit<'de> {
@@ -43,7 +43,7 @@ impl<'de> CompilationUnit<'de> {
     ) -> CompilationUnit<'de> {
         CompilationUnit {
             ast,
-            _diagnostics_bag: diagnostics_bag,
+            diagnostics_bag,
         }
     }
 
