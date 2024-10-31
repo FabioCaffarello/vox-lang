@@ -3,6 +3,9 @@ use text::span::TextSpan;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenKind {
+    // Literals
+    String,
+    Number(f64),
     // Punctuators and Delimiters
     LParen,
     RParen,
@@ -14,25 +17,22 @@ pub enum TokenKind {
     Colon,
     SemiColon,
     Dot,
-
     // Keywords
     If,
     Else,
     While,
     For,
-    Return,
     Fun,
+    Return,
     True,
     False,
     Nil,
-    String,
-    Number(f64),
     And,
     Or,
     Not,
     In,
-
-    // Text Processing Keywords
+    Let,
+    // Built-in Functions
     Split,
     Join,
     Map,
@@ -40,24 +40,17 @@ pub enum TokenKind {
     Reduce,
     Replace,
     Extract,
-
-    // Literals
-    Identifier,
-    Let,
-
-    // Built-in Functions
     Length,
     TypeOf,
     Range,
     Concatenate,
-
     // Arithmetic Operators
     Plus,
     Minus,
     Star,
     Slash,
     Percent,
-
+    DoubleStar,
     // Comparison Operators
     Equal,
     Bang,
@@ -67,8 +60,8 @@ pub enum TokenKind {
     GreaterEqual,
     Less,
     LessEqual,
-
-    // Comments
+    // Others
+    Identifier,
     LineComment,
     BlockComment,
     Bad,
@@ -92,6 +85,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Minus => write!(f, "-"),
             TokenKind::Star => write!(f, "*"),
             TokenKind::Slash => write!(f, "/"),
+            TokenKind::DoubleStar => write!(f, "**"),
             TokenKind::Percent => write!(f, "PERCENT"),
             TokenKind::Equal => write!(f, "EQUAL"),
             TokenKind::Bang => write!(f, "BANG"),
@@ -147,6 +141,16 @@ impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let literal = self.span.literal();
         match self.kind {
+            // Literals
+            TokenKind::String => write!(f, "STRING {literal} null"),
+            TokenKind::Number(n) => {
+                if n == n.trunc() {
+                    // tests require that integers are printed as N.0
+                    write!(f, "NUMBER {literal} {n}.0")
+                } else {
+                    write!(f, "NUMBER {literal} {n}")
+                }
+            }
             // Punctuators and Delimiters
             TokenKind::LParen => write!(f, "LEFT_PAREN {literal} null"),
             TokenKind::RParen => write!(f, "RIGHT_PAREN {literal} null"),
@@ -172,7 +176,7 @@ impl fmt::Display for Token<'_> {
             TokenKind::Or => write!(f, "OR {literal} null"),
             TokenKind::Not => write!(f, "NOT {literal} null"),
             TokenKind::In => write!(f, "IN {literal} null"),
-            // Text Processing Keywords
+            // Built-in Functions
             TokenKind::Split => write!(f, "SPLIT {literal} null"),
             TokenKind::Join => write!(f, "JOIN {literal} null"),
             TokenKind::Map => write!(f, "MAP {literal} null"),
@@ -180,20 +184,8 @@ impl fmt::Display for Token<'_> {
             TokenKind::Reduce => write!(f, "REDUCE {literal} null"),
             TokenKind::Replace => write!(f, "REPLACE {literal} null"),
             TokenKind::Extract => write!(f, "EXTRACT {literal} null"),
-            // Strings and Numbers
-            TokenKind::String => write!(f, "STRING {literal} null"),
-            TokenKind::Number(n) => {
-                if n == n.trunc() {
-                    // tests require that integers are printed as N.0
-                    write!(f, "NUMBER {literal} {n}.0")
-                } else {
-                    write!(f, "NUMBER {literal} {n}")
-                }
-            }
-            // Literals
             TokenKind::Identifier => write!(f, "{literal}"),
             TokenKind::Let => write!(f, "LET {literal} null"),
-            // Built-in Functions
             TokenKind::Length => write!(f, "LENGTH {literal} null"),
             TokenKind::TypeOf => write!(f, "TYPE_OF {literal} null"),
             TokenKind::Range => write!(f, "RANGE {literal} null"),
@@ -204,6 +196,7 @@ impl fmt::Display for Token<'_> {
             TokenKind::Star => write!(f, "STAR {literal} null"),
             TokenKind::Slash => write!(f, "SLASH {literal} null"),
             TokenKind::Percent => write!(f, "PERCENT {literal} null"),
+            TokenKind::DoubleStar => write!(f, "DOUBLE_STAR {literal} null"),
             // Comparison operators
             TokenKind::Equal => write!(f, "EQUAL {literal} null"),
             TokenKind::Bang => write!(f, "BANG {literal} null"),
@@ -213,7 +206,7 @@ impl fmt::Display for Token<'_> {
             TokenKind::GreaterEqual => write!(f, "GREATER_EQUAL {literal} null"),
             TokenKind::Less => write!(f, "LESS {literal} null"),
             TokenKind::LessEqual => write!(f, "LESS_EQUAL {literal} null"),
-            // Comments
+            // Others
             TokenKind::LineComment => write!(f, "LINE_COMMENT {literal} null"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT {literal} null"),
             TokenKind::Bad => write!(f, "BAD {literal} null"),

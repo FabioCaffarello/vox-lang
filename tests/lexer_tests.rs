@@ -412,8 +412,8 @@ fn test_block_comment_with_quotes() {
 }
 
 #[test]
-fn test_operators() {
-    let input = "+ - * / %";
+fn test_arithmetic_operators() {
+    let input = "+ - * / ** %";
     let mut lexer = Lexer::new(input);
 
     // Define expected tokens with correct byte positions
@@ -422,7 +422,8 @@ fn test_operators() {
         create_token("-", 2, 3, TokenKind::Minus),
         create_token("*", 4, 5, TokenKind::Star),
         create_token("/", 6, 7, TokenKind::Slash),
-        create_token("%", 8, 9, TokenKind::Percent),
+        create_token("**", 8, 10, TokenKind::DoubleStar),
+        create_token("%", 11, 12, TokenKind::Percent),
     ];
 
     for expected in expected_tokens {
@@ -438,7 +439,7 @@ fn test_operators() {
         );
     }
 
-    assert_eof(&mut lexer, 9);
+    assert_eof(&mut lexer, 12);
 }
 
 #[test]
@@ -880,6 +881,7 @@ fn test_token_display() {
         (TokenKind::EOF, "", 198, 198, "EOF  null"),
         (TokenKind::Bad, "@", 199, 200, "BAD @ null"),
         (TokenKind::Let, "let", 201, 204, "LET let null"),
+        (TokenKind::DoubleStar, "**", 205, 207, "DOUBLE_STAR ** null"),
     ];
 
     for (kind, literal, start, end, expected_display) in test_cases {
