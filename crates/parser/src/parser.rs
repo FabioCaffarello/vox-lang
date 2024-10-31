@@ -168,7 +168,7 @@ impl<'de> Parser<'de> {
             _ => {
                 self.diagnostics_bag
                     .borrow_mut()
-                    .report_unexpected_expression(&token);
+                    .report_expected_expression(&token);
                 ASTExpression::error(token.span)
             }
         }
