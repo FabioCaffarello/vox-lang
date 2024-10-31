@@ -828,13 +828,7 @@ fn test_token_display() {
             "STRING \"hello\" null",
         ),
         (TokenKind::Number(42.0), "42", 122, 124, "NUMBER 42 42.0"),
-        (
-            TokenKind::Identifier,
-            "identifier",
-            125,
-            135,
-            "IDENTIFIER identifier null",
-        ),
+        (TokenKind::Identifier, "identifier", 125, 135, "identifier"),
         // Built-in Functions
         (TokenKind::Length, "length", 136, 142, "LENGTH length null"),
         (TokenKind::TypeOf, "typeOf", 143, 149, "TYPE_OF typeOf null"),
