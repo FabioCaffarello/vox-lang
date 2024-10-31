@@ -26,4 +26,13 @@ impl<'de> TextSpan<'de> {
     pub fn literal(&self) -> &str {
         self.literal
     }
+
+    pub fn from_owned_string(start: usize, end: usize, literal: String) -> Self {
+        let leaked_literal = Box::leak(literal.into_boxed_str());
+        Self {
+            start,
+            end,
+            literal: leaked_literal,
+        }
+    }
 }
