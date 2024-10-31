@@ -276,3 +276,16 @@ fn should_parse_negation_in_expression_with_unary() {
     ];
     assert_tree(input, expected);
 }
+
+#[test]
+fn should_parse_negation_in_expression() {
+    let input = "let x = -1 * 2";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Binary,
+        TestASTNode::Unary,
+        TestASTNode::Number(1.0),
+        TestASTNode::Number(2.0),
+    ];
+    assert_tree(input, expected);
+}
