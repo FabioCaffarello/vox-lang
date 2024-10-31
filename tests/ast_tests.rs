@@ -255,3 +255,24 @@ fn should_parse_negation() {
     ];
     assert_tree(input, expected);
 }
+
+#[test]
+fn should_parse_negation_in_expression_with_unary() {
+    let input = "let z = 2 let x = -1 let w = (2 * z) * -x";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Number(2.0),
+        TestASTNode::LetStmt,
+        TestASTNode::Unary,
+        TestASTNode::Number(1.0),
+        TestASTNode::LetStmt,
+        TestASTNode::Binary,
+        TestASTNode::Parenthesized,
+        TestASTNode::Binary,
+        TestASTNode::Number(2.0),
+        TestASTNode::Variable("z".to_string()),
+        TestASTNode::Unary,
+        TestASTNode::Variable("x".to_string()),
+    ];
+    assert_tree(input, expected);
+}
