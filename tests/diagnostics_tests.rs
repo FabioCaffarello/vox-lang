@@ -114,12 +114,6 @@ fn should_report_expected_expression() {
 
     assert_diagnostics(input, raw, expected);
 
-    let input = "let a = «-»";
-    let raw = "let a = -";
-    let expected = vec!["Expected expression, found <->"];
-
-    assert_diagnostics(input, raw, expected);
-
     let input = "let a = «*»";
     let raw = "let a = *";
     let expected = vec!["Expected expression, found <*>"];
@@ -129,6 +123,15 @@ fn should_report_expected_expression() {
     let input = "let a = «/»";
     let raw = "let a = /";
     let expected = vec!["Expected expression, found </>"];
+
+    assert_diagnostics(input, raw, expected);
+}
+
+#[test]
+fn should_report_expected_unary_expression() {
+    let input = "let a = -«»";
+    let raw = "let a = -";
+    let expected = vec!["Expected expression, found <EOF>"];
 
     assert_diagnostics(input, raw, expected);
 }

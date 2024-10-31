@@ -1,6 +1,6 @@
 use ast::ast::{
     ASTBinaryExpression, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
-    ASTVariableExpression, ASTVisitor, Ast,
+    ASTUnaryExpression, ASTVariableExpression, ASTVisitor, Ast,
 };
 use compiler::compilation_unit::CompilationUnit;
 use text::span::TextSpan;
@@ -9,6 +9,7 @@ use text::span::TextSpan;
 enum TestASTNode {
     Number(f64),
     Binary,
+    Unary,
     Parenthesized,
     LetStmt,
     Variable(String),
@@ -29,9 +30,15 @@ fn assert_tree(input: &str, expected: Vec<TestASTNode>) {
 impl<'de> ASTVerifier<'de> {
     pub fn new(input: &'de str, expected: Vec<TestASTNode>) -> Self {
         let compilation_unit = match CompilationUnit::compile(input) {
-            Ok(unit) => unit,
+            Ok(unit) => {
+                assert!(
+                    unit.diagnostics_bag.borrow().diagnostics.is_empty(),
+                    "Compilation failed with diagnostics: {:?}",
+                    unit.diagnostics_bag.borrow().diagnostics
+                );
+                unit
+            }
             Err(diagnostics) => {
-                // Optionally, handle diagnostics here
                 panic!("Compilation failed with diagnostics: {:?}", diagnostics);
             }
         };
@@ -97,6 +104,11 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
     ) {
         self.actual.push(TestASTNode::Parenthesized);
         self.visit_expression(&parenthesized_expression.expression);
+    }
+
+    fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>) {
+        self.actual.push(TestASTNode::Unary);
+        self.visit_expression(&unary_expression.operand);
     }
 
     fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
@@ -229,6 +241,17 @@ fn should_parse_variable_expression_with_multiple_nested_parentheses() {
         TestASTNode::Number(2.0),
         TestASTNode::Number(3.0),
         TestASTNode::Number(4.0),
+    ];
+    assert_tree(input, expected);
+}
+
+#[test]
+fn should_parse_negation() {
+    let input = "let x = -1";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Unary,
+        TestASTNode::Number(1.0),
     ];
     assert_tree(input, expected);
 }

@@ -72,6 +72,7 @@ pub trait ASTVisitor<'de> {
             ASTExpressionKind::Variable(expr) => {
                 self.visit_variable_expression(expr);
             }
+            ASTExpressionKind::UnaryExpression(expr) => self.visit_unary_expression(expr),
         }
     }
 
@@ -84,6 +85,8 @@ pub trait ASTVisitor<'de> {
     fn visit_number_expression(&mut self, number: &ASTNumberExpression);
 
     fn visit_error(&mut self, span: &TextSpan);
+
+    fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>);
 
     fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
         self.visit_expression(&binary_expression.left);
@@ -150,6 +153,15 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
     fn visit_statement(&mut self, statement: &ASTStatement) {
         ASTVisitor::do_visit_statement(self, statement);
         self.result.push_str(&format!("{}", Fg(Reset),));
+    }
+
+    fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression) {
+        self.result.push_str(&format!(
+            "{}{}",
+            Self::TEXT_COLOR.fg_str(),
+            unary_expression.operator.token.span.literal,
+        ));
+        self.visit_expression(&unary_expression.operand);
     }
 
     fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression) {
@@ -232,10 +244,10 @@ impl<'de> ASTBinaryOperator<'de> {
 
     pub fn precedence(&self) -> u8 {
         match self.kind {
-            ASTBinaryOperatorKind::Plus => 1,
-            ASTBinaryOperatorKind::Subtract => 1,
             ASTBinaryOperatorKind::Multiply => 2,
             ASTBinaryOperatorKind::Divide => 2,
+            ASTBinaryOperatorKind::Plus => 1,
+            ASTBinaryOperatorKind::Subtract => 1,
         }
     }
 }
@@ -245,6 +257,29 @@ pub struct ASTBinaryExpression<'de> {
     pub left: Box<ASTExpression<'de>>,
     pub operator: ASTBinaryOperator<'de>,
     pub right: Box<ASTExpression<'de>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ASTUnaryOperatorKind {
+    Minus,
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTUnaryOperator<'de> {
+    pub kind: ASTUnaryOperatorKind,
+    pub token: Token<'de>,
+}
+
+impl<'de> ASTUnaryOperator<'de> {
+    pub fn new(kind: ASTUnaryOperatorKind, token: Token<'de>) -> Self {
+        ASTUnaryOperator { kind, token }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTUnaryExpression<'de> {
+    pub operator: ASTUnaryOperator<'de>,
+    pub operand: Box<ASTExpression<'de>>,
 }
 
 #[derive(Debug, Clone)]
@@ -285,6 +320,7 @@ impl<'de> ASTStatement<'de> {
 pub enum ASTExpressionKind<'de> {
     NumberLiteral(ASTNumberExpression),
     BinaryExpression(ASTBinaryExpression<'de>),
+    UnaryExpression(ASTUnaryExpression<'de>),
     ParenthesizedExpression(ASTParenthesizedExpression<'de>),
     Error(TextSpan<'de>),
     Variable(ASTVariableExpression<'de>),
@@ -314,6 +350,13 @@ impl<'de> ASTExpression<'de> {
     pub fn number_literal(number: f64) -> Self {
         ASTExpression::new(ASTExpressionKind::NumberLiteral(ASTNumberExpression {
             number,
+        }))
+    }
+
+    pub fn unary_expression(operator: ASTUnaryOperator<'de>, operand: ASTExpression<'de>) -> Self {
+        ASTExpression::new(ASTExpressionKind::UnaryExpression(ASTUnaryExpression {
+            operator,
+            operand: Box::new(operand),
         }))
     }
 

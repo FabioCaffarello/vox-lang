@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::ast::{ASTLetStatement, ASTNumberExpression, ASTVariableExpression, ASTVisitor};
+use crate::ast::{
+    ASTLetStatement, ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression, ASTVisitor,
+};
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use text::span::TextSpan;
 
@@ -44,5 +46,9 @@ impl<'de> ASTVisitor<'de> for SymbolChecker<'de> {
 
     fn visit_error(&mut self, _span: &TextSpan) {
         // Implement as needed
+    }
+
+    fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>) {
+        self.visit_expression(&unary_expression.operand);
     }
 }

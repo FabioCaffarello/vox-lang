@@ -4,7 +4,8 @@ pub mod validator;
 
 pub use ast::{
     ASTBinaryExpression, ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTLetStatement,
-    ASTNumberExpression, ASTStatement, ASTStatementKind, ASTVariableExpression,
+    ASTNumberExpression, ASTStatement, ASTStatementKind, ASTUnaryOperator, ASTUnaryOperatorKind,
+    ASTVariableExpression,
 };
 pub use evaluator::ASTEvaluator;
 pub use validator::SymbolChecker;

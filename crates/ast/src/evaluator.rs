@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::ast::{
     ASTBinaryExpression, ASTBinaryOperatorKind, ASTLetStatement, ASTNumberExpression,
-    ASTVariableExpression, ASTVisitor,
+    ASTUnaryExpression, ASTVariableExpression, ASTVisitor,
 };
 use text::span::TextSpan;
 
@@ -50,6 +50,14 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator {
 
     fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
         self.last_value = Some(number.number);
+    }
+
+    fn visit_unary_expression(&mut self, expr: &ASTUnaryExpression<'de>) {
+        self.visit_expression(&expr.operand);
+        let operand = self.last_value.unwrap();
+        self.last_value = Some(match expr.operator.kind {
+            crate::ast::ASTUnaryOperatorKind::Minus => -operand,
+        });
     }
 
     fn visit_binary_expression(&mut self, expr: &ASTBinaryExpression) {
