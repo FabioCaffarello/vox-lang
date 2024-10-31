@@ -144,3 +144,12 @@ fn should_report_unexpected_token() {
 
     assert_diagnostics(input, raw, expected);
 }
+
+#[test]
+fn should_report_expected_expression_multiple_unary_operators() {
+    let input = "let a = -«-»1";
+    let raw = "let a = --1";
+    let expected = vec!["Expected expression, found <->"];
+
+    assert_diagnostics(input, raw, expected);
+}
