@@ -3,13 +3,13 @@ use std::{cell::RefCell, rc::Rc};
 use lexer::token::{Token, TokenKind};
 use text::span::TextSpan;
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 pub enum DiagnosticKind {
     Error,
     Warning,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Diagnostic<'de> {
     pub message: String,
     pub span: TextSpan<'de>,
@@ -26,7 +26,7 @@ impl<'de> Diagnostic<'de> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DiagnosticsBag<'de> {
     pub diagnostics: Vec<Diagnostic<'de>>,
 }
