@@ -203,6 +203,7 @@ impl<'de> Parser<'de> {
             TokenKind::Minus => Some(ASTBinaryOperatorKind::Subtract),
             TokenKind::Star => Some(ASTBinaryOperatorKind::Multiply),
             TokenKind::Slash => Some(ASTBinaryOperatorKind::Divide),
+            TokenKind::DoubleStar => Some(ASTBinaryOperatorKind::Power),
             _ => None,
         };
 

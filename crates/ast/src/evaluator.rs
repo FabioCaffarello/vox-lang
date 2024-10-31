@@ -70,6 +70,7 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator {
             ASTBinaryOperatorKind::Subtract => left - right,
             ASTBinaryOperatorKind::Multiply => left * right,
             ASTBinaryOperatorKind::Divide => left / right,
+            ASTBinaryOperatorKind::Power => left.powf(right),
         });
     }
 

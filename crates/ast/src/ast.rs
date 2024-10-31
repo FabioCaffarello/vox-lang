@@ -229,6 +229,7 @@ pub enum ASTBinaryOperatorKind {
     Subtract,
     Multiply,
     Divide,
+    Power,
 }
 
 #[derive(Debug, Clone)]
@@ -244,6 +245,7 @@ impl<'de> ASTBinaryOperator<'de> {
 
     pub fn precedence(&self) -> u8 {
         match self.kind {
+            ASTBinaryOperatorKind::Power => 3,
             ASTBinaryOperatorKind::Multiply => 2,
             ASTBinaryOperatorKind::Divide => 2,
             ASTBinaryOperatorKind::Plus => 1,
