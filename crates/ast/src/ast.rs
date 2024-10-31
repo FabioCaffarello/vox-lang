@@ -2,6 +2,7 @@ use lexer::Token;
 use termion::color::{self, Fg, Reset};
 use text::span::TextSpan;
 
+#[derive(Debug, Clone)]
 pub struct Ast<'de> {
     pub statements: Vec<ASTStatement<'de>>,
 }
@@ -200,15 +201,17 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTNumberExpression {
     pub number: f64,
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTParenthesizedExpression<'de> {
     pub expression: Box<ASTExpression<'de>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ASTBinaryOperatorKind {
     Plus,
     Subtract,
@@ -216,6 +219,7 @@ pub enum ASTBinaryOperatorKind {
     Divide,
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTBinaryOperator<'de> {
     pub kind: ASTBinaryOperatorKind,
     token: Token<'de>,
@@ -236,22 +240,26 @@ impl<'de> ASTBinaryOperator<'de> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTBinaryExpression<'de> {
     pub left: Box<ASTExpression<'de>>,
     pub operator: ASTBinaryOperator<'de>,
     pub right: Box<ASTExpression<'de>>,
 }
 
+#[derive(Debug, Clone)]
 pub enum ASTStatementKind<'de> {
     Expression(ASTExpression<'de>),
     LetStatement(ASTLetStatement<'de>),
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTLetStatement<'de> {
     pub identifier: Token<'de>,
     pub initializer: ASTExpression<'de>,
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTStatement<'de> {
     kind: ASTStatementKind<'de>,
 }
@@ -273,6 +281,7 @@ impl<'de> ASTStatement<'de> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum ASTExpressionKind<'de> {
     NumberLiteral(ASTNumberExpression),
     BinaryExpression(ASTBinaryExpression<'de>),
@@ -281,6 +290,7 @@ pub enum ASTExpressionKind<'de> {
     Variable(ASTVariableExpression<'de>),
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTVariableExpression<'de> {
     pub identifier: Token<'de>,
 }
@@ -291,6 +301,7 @@ impl<'de> ASTVariableExpression<'de> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ASTExpression<'de> {
     kind: ASTExpressionKind<'de>,
 }
