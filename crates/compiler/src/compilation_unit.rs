@@ -8,8 +8,9 @@ use diagnostics::{
 use parser::Parser;
 use text::source::SourceText;
 
+#[derive(Debug)]
 pub struct CompilationUnit<'de> {
-    ast: Ast<'de>,
+    pub ast: Ast<'de>,
     _diagnostics_bag: DiagnosticsBagCell<'de>,
 }
 
