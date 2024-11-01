@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/ast",
+    "crates/compiler",
     "crates/diagnostics",
     "crates/lexer",
     "crates/parser",
@@ -20,6 +21,7 @@ path = "src/main.rs"
 
 [dependencies]
 ast = { path = "crates/ast" }
+compiler = { path = "crates/compiler" }
 diagnostics = { path = "crates/diagnostics" }
 lexer = { path = "crates/lexer" }
 parser = { path = "crates/parser" }

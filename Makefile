@@ -29,8 +29,16 @@ lint:
 
 # Run tests for all projects
 test:
-	@echo "Running tests with cargo test"
-	cargo test --all
+	@echo "Running tests"
+	@if [ -n "$(file)" ]; then \
+		if [ -n "$(test)" ]; then \
+			cargo test --test $(file) -- $(test); \
+		else \
+			cargo test --test $(file); \
+		fi; \
+	else \
+		cargo test --all; \
+	fi
 
 coverage:
 	@echo "Running tests with coverage using cargo tarpaulin"

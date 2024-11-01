@@ -3,11 +3,13 @@ use std::{cell::RefCell, rc::Rc};
 use lexer::token::{Token, TokenKind};
 use text::span::TextSpan;
 
+#[derive(Clone, Copy, Debug)]
 pub enum DiagnosticKind {
     Error,
     Warning,
 }
 
+#[derive(Clone, Debug)]
 pub struct Diagnostic<'de> {
     pub message: String,
     pub span: TextSpan<'de>,
@@ -24,6 +26,7 @@ impl<'de> Diagnostic<'de> {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct DiagnosticsBag<'de> {
     pub diagnostics: Vec<Diagnostic<'de>>,
 }
@@ -59,7 +62,7 @@ impl<'de> DiagnosticsBag<'de> {
         self.report_error(message, token.span);
     }
 
-    pub fn report_unexpected_expression(&mut self, token: &Token<'de>) {
+    pub fn report_expected_expression(&mut self, token: &Token<'de>) {
         let message = format!("Expected expression, found <{}>", token.kind);
         self.report_error(message, token.span);
     }

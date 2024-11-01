@@ -1,7 +1,10 @@
 use std::cell::Cell;
 
 use crate::errors::ParserError;
-use ast::{ast::ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTStatement};
+use ast::{
+    ast::ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTStatement, ASTUnaryOperator,
+    ASTUnaryOperatorKind,
+};
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
@@ -135,16 +138,16 @@ impl<'de> Parser<'de> {
     }
 
     fn parse_binary_expression(&mut self, precedence: u8) -> ASTExpression<'de> {
-        let mut left = self.parse_primary_expression();
+        let mut left = self.parse_unary_expression();
 
         'outer: while {
             let operator = self.parse_binary_operator();
             if let Some(operator) = operator {
-                self.consume();
                 let operator_precedence = operator.precedence();
                 if operator_precedence < precedence {
                     break 'outer;
                 }
+                self.consume();
                 let right = self.parse_binary_expression(operator_precedence);
                 left = ASTExpression::binary_expression(left, operator, right);
                 true
@@ -153,6 +156,15 @@ impl<'de> Parser<'de> {
             }
         } {}
         left
+    }
+
+    fn parse_unary_expression(&mut self) -> ASTExpression<'de> {
+        if let Some(operator) = self.parse_unary_operator() {
+            self.consume();
+            let operand = self.parse_primary_expression();
+            return ASTExpression::unary_expression(operator, operand);
+        }
+        return self.parse_primary_expression();
     }
 
     fn parse_primary_expression(&mut self) -> ASTExpression<'de> {
@@ -168,10 +180,20 @@ impl<'de> Parser<'de> {
             _ => {
                 self.diagnostics_bag
                     .borrow_mut()
-                    .report_unexpected_expression(&token);
+                    .report_expected_expression(&token);
                 ASTExpression::error(token.span)
             }
         }
+    }
+
+    fn parse_unary_operator(&mut self) -> Option<ASTUnaryOperator<'de>> {
+        let token = *self.current();
+        let kind = match token.kind {
+            TokenKind::Minus => Some(ASTUnaryOperatorKind::Minus),
+            _ => None,
+        };
+
+        return kind.map(|kind| ASTUnaryOperator::new(kind, token));
     }
 
     fn parse_binary_operator(&mut self) -> Option<ASTBinaryOperator<'de>> {
@@ -181,6 +203,7 @@ impl<'de> Parser<'de> {
             TokenKind::Minus => Some(ASTBinaryOperatorKind::Subtract),
             TokenKind::Star => Some(ASTBinaryOperatorKind::Multiply),
             TokenKind::Slash => Some(ASTBinaryOperatorKind::Divide),
+            TokenKind::DoubleStar => Some(ASTBinaryOperatorKind::Power),
             _ => None,
         };
 

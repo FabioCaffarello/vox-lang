@@ -94,8 +94,8 @@ impl<'a, 'de> DiagnosticPrinter<'a, 'de> {
             "{:indent$}+-- {} ({}:{})",
             "",
             diagnostic.message,
-            column + 1,
             line_index + 1,
+            column + 1,
             indent = indent
         )
     }

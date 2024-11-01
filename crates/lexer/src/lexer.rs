@@ -80,7 +80,16 @@ impl<'de> Lexer<'de> {
         match c {
             '+' => self.just(TokenKind::Plus, start, end),
             '-' => self.just(TokenKind::Minus, start, end),
-            '*' => self.just(TokenKind::Star, start, end),
+            '*' => {
+                if self.rest.starts_with('*') {
+                    self.rest = &self.rest[1..];
+                    self.byte += 1;
+                    let new_end = end + 1;
+                    self.just(TokenKind::DoubleStar, start, new_end)
+                } else {
+                    self.just(TokenKind::Star, start, end)
+                }
+            }
             '%' => self.just(TokenKind::Percent, start, end),
             '/' => {
                 if self.rest.starts_with('/') {

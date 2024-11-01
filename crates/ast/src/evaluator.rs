@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use crate::ast::{
     ASTBinaryExpression, ASTBinaryOperatorKind, ASTLetStatement, ASTNumberExpression,
-    ASTVariableExpression, ASTVisitor,
+    ASTUnaryExpression, ASTUnaryOperatorKind, ASTVariableExpression,
 };
+use crate::visitor::ASTVisitor;
 use text::span::TextSpan;
 
 pub struct ASTEvaluator {
@@ -52,6 +53,14 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator {
         self.last_value = Some(number.number);
     }
 
+    fn visit_unary_expression(&mut self, expr: &ASTUnaryExpression<'de>) {
+        self.visit_expression(&expr.operand);
+        let operand = self.last_value.unwrap();
+        self.last_value = Some(match expr.operator.kind {
+            ASTUnaryOperatorKind::Minus => -operand,
+        });
+    }
+
     fn visit_binary_expression(&mut self, expr: &ASTBinaryExpression) {
         self.visit_expression(&expr.left);
         let left = self.last_value.unwrap();
@@ -62,6 +71,7 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator {
             ASTBinaryOperatorKind::Subtract => left - right,
             ASTBinaryOperatorKind::Multiply => left * right,
             ASTBinaryOperatorKind::Divide => left / right,
+            ASTBinaryOperatorKind::Power => left.powf(right),
         });
     }
 
