@@ -1,51 +1,54 @@
-use std::collections::HashMap;
-
-use crate::ast::{ASTLetStatement, ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression};
-use crate::visitor::ASTVisitor;
+use crate::{
+    ast::{
+        ASTBooleanExpression, ASTFuncDeclStatement, ASTLetStatement, ASTNumberExpression,
+        ASTUnaryExpression, ASTVariableExpression,
+    },
+    scopes::GlobalScope,
+    visitor::ASTVisitor,
+};
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use text::span::TextSpan;
 
-pub struct SymbolChecker<'de> {
-    symbols: HashMap<String, ()>,
-    diagnostics_bag: DiagnosticsBagCell<'de>,
+pub struct GlobalSymbolResolver<'de> {
+    pub global_scope: GlobalScope<'de>,
+    diagnostics: DiagnosticsBagCell<'de>,
 }
 
-impl<'de> SymbolChecker<'de> {
-    pub fn new(diagnostics_bag: DiagnosticsBagCell<'de>) -> Self {
+impl<'de> GlobalSymbolResolver<'de> {
+    pub fn new(diagnostics: DiagnosticsBagCell<'de>) -> Self {
         Self {
-            symbols: HashMap::new(),
-            diagnostics_bag,
+            global_scope: GlobalScope::new(),
+            diagnostics,
         }
     }
 }
 
-impl<'de> ASTVisitor<'de> for SymbolChecker<'de> {
-    fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
-        let identifier = let_statement.identifier.span.literal.to_string().clone();
-        self.visit_expression(&let_statement.initializer);
-        self.symbols.insert(identifier, ());
-    }
-
-    fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression<'de>) {
-        if !self
-            .symbols
-            .contains_key(variable_expression.identifier.span.literal)
-        {
-            self.diagnostics_bag
-                .borrow_mut()
-                .report_undefined_variable(&variable_expression.identifier);
+impl<'de> ASTVisitor<'de> for GlobalSymbolResolver<'de> {
+    fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
+        let parameters = func_decl_statement
+            .parameters
+            .iter()
+            .map(|parameter| parameter.identifier.span.literal.to_string())
+            .collect();
+        let literal_span = &func_decl_statement.identifier.span;
+        match self.global_scope.declare_function(
+            literal_span.literal,
+            &func_decl_statement.body,
+            parameters,
+        ) {
+            Ok(_) => {}
+            Err(_) => {
+                self.diagnostics
+                    .borrow_mut()
+                    .report_function_already_declared(&func_decl_statement.identifier);
+            }
         }
     }
 
-    fn visit_number_expression(&mut self, _number: &ASTNumberExpression) {
-        // Implement as needed
-    }
-
-    fn visit_error(&mut self, _span: &TextSpan) {
-        // Implement as needed
-    }
-
-    fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>) {
-        self.visit_expression(&unary_expression.operand);
-    }
+    fn visit_let_statement(&mut self, _let_statement: &ASTLetStatement) {}
+    fn visit_variable_expression(&mut self, _variable_expression: &ASTVariableExpression) {}
+    fn visit_number_expression(&mut self, _number: &ASTNumberExpression) {}
+    fn visit_boolean_expression(&mut self, _boolean: &ASTBooleanExpression) {}
+    fn visit_error(&mut self, _span: &TextSpan) {}
+    fn visit_unary_expression(&mut self, _unary_expression: &ASTUnaryExpression) {}
 }

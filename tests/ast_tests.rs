@@ -1,6 +1,8 @@
 use ast::ast::{
-    ASTBinaryExpression, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
-    ASTUnaryExpression, ASTVariableExpression, Ast,
+    ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
+    ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression,
+    ASTParenthesizedExpression, ASTReturnStatement, ASTUnaryExpression, ASTVariableExpression,
+    ASTWhileStatement, Ast,
 };
 use ast::visitor::ASTVisitor;
 use compiler::compilation_unit::CompilationUnit;
@@ -9,11 +11,20 @@ use text::span::TextSpan;
 #[derive(Debug, PartialEq)]
 enum TestASTNode {
     Number(f64),
+    Boolean(bool),
     Binary,
     Unary,
     Parenthesized,
     LetStmt,
+    Assignment,
+    Block,
     Variable(String),
+    If,
+    Else,
+    Func,
+    While,
+    Return,
+    Call,
 }
 
 #[derive(Debug)]
@@ -80,6 +91,10 @@ impl<'de> ASTVerifier<'de> {
 }
 
 impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
+    fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
+        self.actual.push(TestASTNode::Number(number.number));
+    }
+
     fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
         self.actual.push(TestASTNode::LetStmt);
         self.visit_expression(&let_statement.initializer);
@@ -91,14 +106,6 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         ));
     }
 
-    fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
-        self.actual.push(TestASTNode::Number(number.number));
-    }
-
-    fn visit_error(&mut self, _span: &TextSpan) {
-        // do nothing
-    }
-
     fn visit_parenthesized_expression(
         &mut self,
         parenthesized_expression: &ASTParenthesizedExpression<'de>,
@@ -107,15 +114,73 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         self.visit_expression(&parenthesized_expression.expression);
     }
 
+    fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
+        self.actual.push(TestASTNode::Binary);
+        self.visit_expression(&binary_expression.left);
+        self.visit_expression(&binary_expression.right);
+    }
+
     fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>) {
         self.actual.push(TestASTNode::Unary);
         self.visit_expression(&unary_expression.operand);
     }
 
-    fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
-        self.actual.push(TestASTNode::Binary);
-        self.visit_expression(&binary_expression.left);
-        self.visit_expression(&binary_expression.right);
+    fn visit_if_statement(&mut self, if_statement: &ASTIfStatement<'de>) {
+        self.actual.push(TestASTNode::If);
+        self.visit_expression(&if_statement.condition);
+        self.visit_statement(&if_statement.then_branch);
+        if let Some(else_branch) = &if_statement.else_branch {
+            self.actual.push(TestASTNode::Else);
+            self.visit_statement(&else_branch.else_statement);
+        }
+    }
+
+    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement<'de>) {
+        self.actual.push(TestASTNode::Block);
+        for statement in &block_statement.statements {
+            self.visit_statement(statement);
+        }
+    }
+
+    fn visit_assignment_expression(
+        &mut self,
+        assignment_expression: &ASTAssignmentExpression<'de>,
+    ) {
+        self.actual.push(TestASTNode::Assignment);
+        self.visit_expression(&assignment_expression.expression);
+    }
+
+    fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
+        self.actual.push(TestASTNode::Func);
+        self.visit_statement(&func_decl_statement.body);
+    }
+
+    fn visit_return_statement(&mut self, return_statement: &ASTReturnStatement<'de>) {
+        self.actual.push(TestASTNode::Return);
+        if let Some(expression) = &return_statement.return_value {
+            self.visit_expression(expression);
+        }
+    }
+
+    fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement<'de>) {
+        self.actual.push(TestASTNode::While);
+        self.visit_expression(&while_statement.condition);
+        self.visit_statement(&while_statement.body);
+    }
+
+    fn visit_boolean_expression(&mut self, boolean: &ASTBooleanExpression) {
+        self.actual.push(TestASTNode::Boolean(boolean.value));
+    }
+
+    fn visit_call_expression(&mut self, call_expression: &ASTCallExpression<'de>) {
+        self.actual.push(TestASTNode::Call);
+        for argument in &call_expression.arguments {
+            self.visit_expression(argument);
+        }
+    }
+
+    fn visit_error(&mut self, _span: &TextSpan) {
+        // do nothing
     }
 }
 
@@ -288,5 +353,125 @@ fn should_parse_negation_in_expression() {
         TestASTNode::Number(1.0),
         TestASTNode::Number(2.0),
     ];
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_if_statement() {
+    let input = "\
+    let a = 1
+    if a > 0 {
+        a = 20
+    }
+    ";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Number(1.0),
+        TestASTNode::If,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(0.0),
+        TestASTNode::Block,
+        TestASTNode::Assignment,
+        TestASTNode::Number(20.0),
+    ];
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_if_statement_with_else() {
+    let input = "\
+    let a = 1
+    if a > 0 {
+        a = 20
+    } else {
+        a = 30
+    }
+    ";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Number(1.0),
+        TestASTNode::If,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(0.0),
+        TestASTNode::Block,
+        TestASTNode::Assignment,
+        TestASTNode::Number(20.0),
+        TestASTNode::Else,
+        TestASTNode::Block,
+        TestASTNode::Assignment,
+        TestASTNode::Number(30.0),
+    ];
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_while_statement() {
+    let input = "\
+        let a = 1
+        while a < 10 {
+            a = a + 1
+        }
+        ";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Number(1.0),
+        TestASTNode::While,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(10.0),
+        TestASTNode::Block,
+        TestASTNode::Assignment,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(1.0),
+    ];
+
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_function_declaration() {
+    let input = "\
+        func add(a, b) {
+            return a + b
+        }
+        ";
+    let expected = vec![
+        TestASTNode::Func,
+        TestASTNode::Block,
+        TestASTNode::Return,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Variable("b".to_string()),
+    ];
+
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_call_expression() {
+    let input = "\
+        func add(a, b) {
+            return a + b
+        }
+        add(2 * 3, 4 + 5)";
+    let expected = vec![
+        TestASTNode::Func,
+        TestASTNode::Block,
+        TestASTNode::Return,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Variable("b".to_string()),
+        TestASTNode::Call,
+        TestASTNode::Binary,
+        TestASTNode::Number(2.0),
+        TestASTNode::Number(3.0),
+        TestASTNode::Binary,
+        TestASTNode::Number(4.0),
+        TestASTNode::Number(5.0),
+    ];
+
     assert_tree(input, expected);
 }

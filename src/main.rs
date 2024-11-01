@@ -45,8 +45,9 @@ fn main() -> miette::Result<()> {
                 println!("{token}");
             }
 
-            if any_cc_err {
-                std::process::exit(65);
+            match any_cc_err {
+                true => Err(miette::miette!("Encountered compilation errors")),
+                false => Ok(()),
             }
         }
         Commands::Parse { filename } => {
@@ -55,14 +56,40 @@ fn main() -> miette::Result<()> {
                 .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
 
             match CompilationUnit::compile(&file_contents) {
-                Ok(mut compilation_unit) => {
+                Ok(compilation_unit) => {
                     compilation_unit.run();
                 }
                 Err(_) => {
                     std::process::exit(65);
                 }
             }
+            Ok(())
         }
     }
-    Ok(())
+    // let input = "
+    // /*
+    //     func add(a, b) {
+    //         return a + b
+    //     }
+    //     add(2 * 3, 4 + 5)
+    //     {
+    //         let a = 10
+    //         a
+    //     }
+    // */
+    // let a = add(1, 2)
+    // func add(a, b) {
+    //     return a + b
+    //     }
+    // ";
+
+    // match CompilationUnit::compile(input) {
+    //     Ok(compilation_unit) => {
+    //         compilation_unit.run();
+    //     }
+    //     Err(_) => {
+    //         std::process::exit(65);
+    //     }
+    // }
+    // Ok(())
 }

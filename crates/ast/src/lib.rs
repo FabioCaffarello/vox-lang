@@ -1,15 +1,19 @@
 pub mod ast;
 pub mod evaluator;
 pub mod printer;
+pub mod scopes;
 pub mod validator;
 pub mod visitor;
 
 pub use ast::{
-    ASTBinaryExpression, ASTBinaryOperator, ASTBinaryOperatorKind, ASTExpression, ASTLetStatement,
-    ASTNumberExpression, ASTStatement, ASTStatementKind, ASTUnaryOperator, ASTUnaryOperatorKind,
-    ASTVariableExpression,
+    ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperator, ASTBinaryOperatorKind,
+    ASTBlockStatement, ASTElseStatement, ASTExpression, ASTFuncDeclStatement, ASTIfStatement,
+    ASTLetStatement, ASTNumberExpression, ASTReturnStatement, ASTStatement, ASTStatementKind,
+    ASTUnaryOperator, ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement,
+    FuncDeclParameter,
 };
 pub use evaluator::ASTEvaluator;
 pub use printer::ASTPrinter;
-pub use validator::SymbolChecker;
+pub use scopes::{GlobalScope, LocalScope, Resolver, Scopes};
+pub use validator::GlobalSymbolResolver;
 pub use visitor::ASTVisitor;

@@ -211,7 +211,7 @@ impl<'de> Lexer<'de> {
                 "else" => TokenKind::Else,
                 "false" => TokenKind::False,
                 "for" => TokenKind::For,
-                "fun" => TokenKind::Fun,
+                "func" => TokenKind::Fun,
                 "nil" => TokenKind::Nil,
                 "not" => TokenKind::Not,
                 "in" => TokenKind::In,
