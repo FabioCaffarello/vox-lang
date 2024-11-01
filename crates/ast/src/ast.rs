@@ -39,86 +39,9 @@ impl<'de> Ast<'de> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ASTNumberExpression {
-    pub number: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTParenthesizedExpression<'de> {
-    pub expression: Box<ASTExpression<'de>>,
-}
-
-#[derive(Debug, Clone)]
-pub enum ASTBinaryOperatorKind {
-    Plus,
-    Subtract,
-    Multiply,
-    Divide,
-    Power,
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTBinaryOperator<'de> {
-    pub kind: ASTBinaryOperatorKind,
-    pub token: Token<'de>,
-}
-
-impl<'de> ASTBinaryOperator<'de> {
-    pub fn new(kind: ASTBinaryOperatorKind, token: Token<'de>) -> Self {
-        ASTBinaryOperator { kind, token }
-    }
-
-    pub fn precedence(&self) -> u8 {
-        match self.kind {
-            ASTBinaryOperatorKind::Power => 3,
-            ASTBinaryOperatorKind::Multiply => 2,
-            ASTBinaryOperatorKind::Divide => 2,
-            ASTBinaryOperatorKind::Plus => 1,
-            ASTBinaryOperatorKind::Subtract => 1,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTBinaryExpression<'de> {
-    pub left: Box<ASTExpression<'de>>,
-    pub operator: ASTBinaryOperator<'de>,
-    pub right: Box<ASTExpression<'de>>,
-}
-
-#[derive(Debug, Clone)]
-pub enum ASTUnaryOperatorKind {
-    Minus,
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTUnaryOperator<'de> {
-    pub kind: ASTUnaryOperatorKind,
-    pub token: Token<'de>,
-}
-
-impl<'de> ASTUnaryOperator<'de> {
-    pub fn new(kind: ASTUnaryOperatorKind, token: Token<'de>) -> Self {
-        ASTUnaryOperator { kind, token }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTUnaryExpression<'de> {
-    pub operator: ASTUnaryOperator<'de>,
-    pub operand: Box<ASTExpression<'de>>,
-}
-
-#[derive(Debug, Clone)]
 pub enum ASTStatementKind<'de> {
     Expression(ASTExpression<'de>),
     LetStatement(ASTLetStatement<'de>),
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTLetStatement<'de> {
-    pub identifier: Token<'de>,
-    pub initializer: ASTExpression<'de>,
 }
 
 #[derive(Debug, Clone)]
@@ -151,17 +74,6 @@ pub enum ASTExpressionKind<'de> {
     ParenthesizedExpression(ASTParenthesizedExpression<'de>),
     Error(TextSpan<'de>),
     Variable(ASTVariableExpression<'de>),
-}
-
-#[derive(Debug, Clone)]
-pub struct ASTVariableExpression<'de> {
-    pub identifier: Token<'de>,
-}
-
-impl<'de> ASTVariableExpression<'de> {
-    pub fn identifier(&self) -> &str {
-        self.identifier.span.literal
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -216,4 +128,92 @@ impl<'de> ASTExpression<'de> {
             identifier,
         }))
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTBinaryExpression<'de> {
+    pub left: Box<ASTExpression<'de>>,
+    pub operator: ASTBinaryOperator<'de>,
+    pub right: Box<ASTExpression<'de>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ASTBinaryOperatorKind {
+    Plus,
+    Subtract,
+    Multiply,
+    Divide,
+    Power,
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTBinaryOperator<'de> {
+    pub kind: ASTBinaryOperatorKind,
+    pub token: Token<'de>,
+}
+
+impl<'de> ASTBinaryOperator<'de> {
+    pub fn new(kind: ASTBinaryOperatorKind, token: Token<'de>) -> Self {
+        ASTBinaryOperator { kind, token }
+    }
+
+    pub fn precedence(&self) -> u8 {
+        match self.kind {
+            ASTBinaryOperatorKind::Power => 3,
+            ASTBinaryOperatorKind::Multiply => 2,
+            ASTBinaryOperatorKind::Divide => 2,
+            ASTBinaryOperatorKind::Plus => 1,
+            ASTBinaryOperatorKind::Subtract => 1,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTUnaryExpression<'de> {
+    pub operator: ASTUnaryOperator<'de>,
+    pub operand: Box<ASTExpression<'de>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ASTUnaryOperatorKind {
+    Minus,
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTUnaryOperator<'de> {
+    pub kind: ASTUnaryOperatorKind,
+    pub token: Token<'de>,
+}
+
+impl<'de> ASTUnaryOperator<'de> {
+    pub fn new(kind: ASTUnaryOperatorKind, token: Token<'de>) -> Self {
+        ASTUnaryOperator { kind, token }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTLetStatement<'de> {
+    pub identifier: Token<'de>,
+    pub initializer: ASTExpression<'de>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTVariableExpression<'de> {
+    pub identifier: Token<'de>,
+}
+
+impl<'de> ASTVariableExpression<'de> {
+    pub fn identifier(&self) -> &str {
+        self.identifier.span.literal
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTNumberExpression {
+    pub number: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTParenthesizedExpression<'de> {
+    pub expression: Box<ASTExpression<'de>>,
 }
