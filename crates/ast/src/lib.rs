@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod evaluator;
+pub mod printer;
 pub mod validator;
 
 pub use ast::{
@@ -8,4 +9,5 @@ pub use ast::{
     ASTVariableExpression,
 };
 pub use evaluator::ASTEvaluator;
+pub use printer::ASTPrinter;
 pub use validator::SymbolChecker;
