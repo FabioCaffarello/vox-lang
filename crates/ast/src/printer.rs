@@ -202,6 +202,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
             self.add_whitespace();
         }
         self.visit_statement(&func_decl_statement.body);
+        self.add_newline();
     }
 
     fn visit_return_statement(&mut self, return_statement: &ASTReturnStatement) {
@@ -221,7 +222,6 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
     }
 
     fn visit_call_expression(&mut self, call_expression: &ASTCallExpression) {
-        self.add_newline();
         self.add_text(call_expression.identifier.span.literal);
         self.add_text("(");
         for (i, argument) in call_expression.arguments.iter().enumerate() {
