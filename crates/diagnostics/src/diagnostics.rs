@@ -67,13 +67,42 @@ impl<'de> DiagnosticsBag<'de> {
         self.report_error(message, token.span);
     }
 
-    pub fn report_undefined_variable(&mut self, token: &Token<'de>) {
-        let message = format!("Undefined variable: <{}>", token.span.literal);
+    pub fn report_undeclared_variable(&mut self, token: &Token<'de>) {
+        let message = format!("Undeclared variable: <{}>", token.span.literal);
         self.report_error(message, token.span);
     }
 
     fn report(&mut self, message: String, span: TextSpan<'de>, kind: DiagnosticKind) {
         let diagnostic = Diagnostic::new(message, span, kind);
         self.diagnostics.push(diagnostic);
+    }
+
+    pub fn report_undeclared_function(&mut self, token: &Token<'de>) {
+        self.report_error(
+            format!("Undeclared function '{}'", token.span.literal),
+            token.span,
+        );
+    }
+
+    pub fn report_invalid_argument_count(
+        &mut self,
+        token: &Token<'de>,
+        expected: usize,
+        actual: usize,
+    ) {
+        self.report_error(
+            format!(
+                "Function '{}' expects {} arguments, but was given {}",
+                token.span.literal, expected, actual
+            ),
+            token.span,
+        );
+    }
+
+    pub fn report_function_already_declared(&mut self, token: &Token<'de>) {
+        self.report_error(
+            format!("Function '{}' already declared", token.span.literal),
+            token.span,
+        );
     }
 }

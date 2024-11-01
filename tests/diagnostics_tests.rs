@@ -101,7 +101,7 @@ impl<'de> DiagnosticsVerifier<'de> {
 fn should_report_undeclared_variable() {
     let input = "let a = «b»";
     let raw = "let a = b";
-    let expected = vec!["Undefined variable: <b>"];
+    let expected = vec!["Undeclared variable: <b>"];
 
     assert_diagnostics(input, raw, expected);
 }

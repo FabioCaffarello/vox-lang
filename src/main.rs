@@ -1,3 +1,4 @@
+use ast::scopes::GlobalScope;
 use clap::{Parser, Subcommand};
 use compiler::compilation_unit::CompilationUnit;
 use lexer::Lexer;
@@ -54,9 +55,10 @@ fn main() -> miette::Result<()> {
                 .into_diagnostic()
                 .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
 
+            let global_scope = GlobalScope::new();
             match CompilationUnit::compile(&file_contents) {
                 Ok(mut compilation_unit) => {
-                    compilation_unit.run();
+                    compilation_unit.run(&global_scope);
                 }
                 Err(_) => {
                     std::process::exit(65);
