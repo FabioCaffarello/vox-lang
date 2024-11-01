@@ -1,10 +1,7 @@
-// validator.rs
-
 use std::collections::HashMap;
 
-use crate::ast::{
-    ASTLetStatement, ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression, ASTVisitor,
-};
+use crate::ast::{ASTLetStatement, ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression};
+use crate::visitor::ASTVisitor;
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use text::span::TextSpan;
 

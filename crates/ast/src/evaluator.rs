@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use crate::ast::{
     ASTBinaryExpression, ASTBinaryOperatorKind, ASTLetStatement, ASTNumberExpression,
-    ASTUnaryExpression, ASTUnaryOperatorKind, ASTVariableExpression, ASTVisitor,
+    ASTUnaryExpression, ASTUnaryOperatorKind, ASTVariableExpression,
 };
+use crate::visitor::ASTVisitor;
 use text::span::TextSpan;
 
 pub struct ASTEvaluator {

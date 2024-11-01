@@ -1,7 +1,8 @@
 use crate::ast::{
     ASTBinaryExpression, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
-    ASTStatement, ASTUnaryExpression, ASTVariableExpression, ASTVisitor,
+    ASTStatement, ASTUnaryExpression, ASTVariableExpression,
 };
+use crate::visitor::ASTVisitor;
 use termion::color::{self, Fg, Reset};
 use text::span::TextSpan;
 

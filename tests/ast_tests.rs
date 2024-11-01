@@ -1,7 +1,8 @@
 use ast::ast::{
     ASTBinaryExpression, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
-    ASTUnaryExpression, ASTVariableExpression, ASTVisitor, Ast,
+    ASTUnaryExpression, ASTVariableExpression, Ast,
 };
+use ast::visitor::ASTVisitor;
 use compiler::compilation_unit::CompilationUnit;
 use text::span::TextSpan;
 
