@@ -153,3 +153,60 @@ fn should_report_expected_expression_multiple_unary_operators() {
 
     assert_diagnostics(input, raw, expected);
 }
+
+#[test]
+fn should_not_report_any_errors_when_shadowing_variable() {
+    let raw = "\
+    let a = 0
+    {
+        let a = 10
+    }
+    ";
+
+    let input = "\
+    let a = 0
+    {
+        let a = 10
+    }
+    ";
+    let expected = vec![];
+
+    let verifier = DiagnosticsVerifier::new(input, raw, expected);
+    verifier.verify();
+}
+
+#[test]
+fn should_report_function_already_declared() {
+    let raw = "\
+    func a() {}
+    func a() {}
+    ";
+
+    let input = "\
+    func a() {}
+    func «a»() {}
+    ";
+
+    let expected = vec!["Function 'a' already declared"];
+
+    let verifier = DiagnosticsVerifier::new(input, raw, expected);
+    verifier.verify();
+}
+
+#[test]
+pub fn should_report_error_when_function_is_called_with_wrong_number_of_arguments() {
+    let raw = "\
+    func a(a, b) {}
+    a(1)
+    ";
+
+    let input = "\
+    func a(a, b) {}
+    «a»(1)
+    ";
+
+    let expected = vec!["Function 'a' expects 2 arguments, but was given 1"];
+
+    let verifier = DiagnosticsVerifier::new(input, raw, expected);
+    verifier.verify();
+}
