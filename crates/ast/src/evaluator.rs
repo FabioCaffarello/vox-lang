@@ -85,9 +85,9 @@ impl<'de> ASTEvaluator<'de> {
     {
         let result = instruction();
         if result {
-            1 as f64
+            1_f64
         } else {
-            0 as f64
+            0_f64
         }
     }
 
@@ -99,12 +99,6 @@ impl<'de> ASTEvaluator<'de> {
         self.frames.pop();
     }
 }
-
-// impl<'a> Default for ASTEvaluator<'a> {
-//     fn default() -> Self {
-//         Self::new(&GlobalScope::new())
-//     }
-// }
 
 impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
     fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
@@ -125,7 +119,7 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
             *self
                 .frames
                 .get(&identifier.to_string())
-                .expect(format!("Variable {} not found", identifier).as_str()),
+                .unwrap_or_else(|| panic!("Variable {} not found", identifier)),
         );
     }
 
@@ -154,9 +148,9 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
             ASTBinaryOperatorKind::Power => left.powf(right),
             ASTBinaryOperatorKind::Equals => {
                 if left == right {
-                    1 as f64
+                    1_f64
                 } else {
-                    0 as f64
+                    0_f64
                 }
             }
             ASTBinaryOperatorKind::NotEquals => self.eval_boolean_instruction(|| left != right),
@@ -226,7 +220,7 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
     fn visit_call_expression(&mut self, call_expression: &ASTCallExpression<'de>) {
         let function = self
             .global_scope
-            .lookup_function(&call_expression.identifier.span.literal)
+            .lookup_function(call_expression.identifier.span.literal)
             .unwrap();
         let mut arguments = Vec::new();
         for argument in &call_expression.arguments {

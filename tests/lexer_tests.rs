@@ -792,7 +792,7 @@ fn test_token_display() {
         (TokenKind::While, "while", 18, 23, "WHILE while null"),
         (TokenKind::For, "for", 24, 27, "FOR for null"),
         (TokenKind::Return, "return", 28, 34, "RETURN return null"),
-        (TokenKind::Fun, "fun", 35, 38, "FUN fun null"),
+        (TokenKind::Fun, "fun", 35, 38, "FUNC fun null"),
         (TokenKind::True, "true", 39, 43, "TRUE true null"),
         (TokenKind::False, "false", 44, 49, "FALSE false null"),
         (TokenKind::Nil, "nil", 50, 53, "NIL nil null"),

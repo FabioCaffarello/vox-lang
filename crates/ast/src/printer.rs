@@ -40,10 +40,7 @@ impl ASTPrinter {
 
     #[allow(clippy::single_char_add_str)]
     fn add_newline(&mut self) {
-        self.result.push_str(
-            "
-",
-        );
+        self.result.push('\n');
     }
 
     fn add_keyword(&mut self, keyword: &str) {
@@ -85,6 +82,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
     }
 
     fn visit_statement(&mut self, statement: &ASTStatement) {
+        self.add_padding();
         ASTVisitor::do_visit_statement(self, statement);
         self.result.push_str(&format!("{}", Fg(Reset),));
     }
@@ -135,7 +133,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
             .push_str(&format!("{}{}", Self::TEXT_COLOR.fg_str(), "=",));
         self.add_whitespace();
         self.visit_expression(&let_statement.initializer);
-        self.add_whitespace(); // FIXME: This is a hack to make the output look better
+        self.add_newline();
     }
 
     fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression) {
@@ -155,6 +153,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
         }
         self.indent -= 1;
         self.add_padding();
+        self.add_newline();
         self.add_text("}");
     }
 
@@ -164,7 +163,9 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
         self.visit_expression(&if_statement.condition);
         self.add_whitespace();
         self.visit_statement(&if_statement.then_branch);
+
         if let Some(else_branch) = &if_statement.else_branch {
+            self.add_whitespace();
             self.add_keyword("else");
             self.add_whitespace();
             self.visit_statement(&else_branch.else_statement);
@@ -182,7 +183,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement) {
         self.add_keyword("func");
         self.add_whitespace();
-        self.add_text(&func_decl_statement.identifier.span.literal);
+        self.add_text(func_decl_statement.identifier.span.literal);
         let are_parameters_empty = func_decl_statement.parameters.is_empty();
         if !are_parameters_empty {
             self.add_text("(");
@@ -194,7 +195,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
                 self.add_text(",");
                 self.add_whitespace();
             }
-            self.add_text(&parameter.identifier.span.literal);
+            self.add_text(parameter.identifier.span.literal);
         }
         if !are_parameters_empty {
             self.add_text(")");
@@ -202,6 +203,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
         }
         self.visit_statement(&func_decl_statement.body);
     }
+
     fn visit_return_statement(&mut self, return_statement: &ASTReturnStatement) {
         self.add_keyword("return");
         if let Some(expression) = &return_statement.return_value {
@@ -209,6 +211,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
             self.visit_expression(expression);
         }
     }
+
     fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement) {
         self.add_keyword("while");
         self.add_whitespace();
@@ -218,7 +221,8 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
     }
 
     fn visit_call_expression(&mut self, call_expression: &ASTCallExpression) {
-        self.add_text(&call_expression.identifier.span.literal);
+        self.add_newline();
+        self.add_text(call_expression.identifier.span.literal);
         self.add_text("(");
         for (i, argument) in call_expression.arguments.iter().enumerate() {
             if i != 0 {

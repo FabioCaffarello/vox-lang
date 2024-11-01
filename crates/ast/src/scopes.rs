@@ -17,6 +17,12 @@ pub struct GlobalScope<'de> {
     pub functions: HashMap<String, FunctionSymbol<'de>>,
 }
 
+impl<'de> Default for GlobalScope<'de> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct FunctionSymbol<'de> {
     pub parameters: Vec<String>,
@@ -36,9 +42,10 @@ impl<'de> GlobalScope<'de> {
     }
 
     fn lookup_variable(&self, identifier: &str) -> bool {
-        self.variables.get(identifier).is_some()
+        self.variables.contains_key(identifier)
     }
 
+    #[allow(clippy::result_unit_err)]
     pub fn declare_function(
         &mut self,
         identifier: &str,
@@ -78,7 +85,7 @@ impl LocalScope {
     }
 
     fn lookup_variable(&self, identifier: &str) -> bool {
-        self.variables.get(identifier).is_some()
+        self.variables.contains_key(identifier)
     }
 }
 
@@ -88,8 +95,14 @@ pub struct Scopes<'de> {
     pub global_scope: GlobalScope<'de>,
 }
 
+impl<'de> Default for Scopes<'de> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'de> Scopes<'de> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Scopes {
             local_scopes: Vec::new(),
             global_scope: GlobalScope::new(),
@@ -159,13 +172,13 @@ impl<'de> Resolver<'de> {
 }
 
 #[derive(Debug)]
-struct GlobalSymbolResolver<'de> {
+pub struct GlobalSymbolResolver<'de> {
     diagnostics: DiagnosticsBagCell<'de>,
     global_scope: GlobalScope<'de>,
 }
 
 impl<'de> GlobalSymbolResolver<'de> {
-    fn new(diagnostics: DiagnosticsBagCell<'de>) -> Self {
+    pub fn new(diagnostics: DiagnosticsBagCell<'de>) -> Self {
         GlobalSymbolResolver {
             diagnostics,
             global_scope: GlobalScope::new(),
@@ -213,7 +226,7 @@ impl<'de> ASTVisitor<'de> for Resolver<'de> {
         self.scopes.enter_scope();
         for parameter in &func_decl_statement.parameters {
             self.scopes
-                .declare_variable(&parameter.identifier.span.literal);
+                .declare_variable(parameter.identifier.span.literal);
         }
         self.visit_statement(&func_decl_statement.body);
         self.scopes.exit_scope();
@@ -242,13 +255,13 @@ impl<'de> ASTVisitor<'de> for Resolver<'de> {
     fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
         let identifier = let_statement.identifier.span.literal;
         self.visit_expression(&let_statement.initializer);
-        self.scopes.declare_variable(&identifier);
+        self.scopes.declare_variable(identifier);
     }
 
     fn visit_call_expression(&mut self, call_expression: &ASTCallExpression<'de>) {
         let function = self
             .scopes
-            .lookup_function(&call_expression.identifier.span.literal);
+            .lookup_function(call_expression.identifier.span.literal);
         match function {
             None => {
                 let mut diagnostics_binding = self.diagnostics.borrow_mut();
@@ -273,7 +286,7 @@ impl<'de> ASTVisitor<'de> for Resolver<'de> {
     fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression<'de>) {
         if !self
             .scopes
-            .lookup_variable(&variable_expression.identifier.span.literal)
+            .lookup_variable(variable_expression.identifier.span.literal)
         {
             let mut diagnostics_binding = self.diagnostics.borrow_mut();
             diagnostics_binding.report_undeclared_variable(&variable_expression.identifier);

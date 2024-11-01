@@ -141,14 +141,14 @@ impl<'de> Parser<'de> {
     fn parse_expression(&mut self) -> ASTExpression<'de> {
         self.parse_assignment_expression()
     }
+
     fn parse_assignment_expression(&mut self) -> ASTExpression<'de> {
-        if self.current().kind == TokenKind::Identifier {
-            if self.peek(1).kind == TokenKind::Equal {
-                let identifier = self.consume_and_check(TokenKind::Identifier).clone();
-                self.consume_and_check(TokenKind::Equal);
-                let expr = self.parse_expression();
-                return ASTExpression::assignment(identifier, expr);
-            }
+        if self.current().kind == TokenKind::Identifier && self.peek(1).kind == TokenKind::Equal {
+            let identifier = self.consume_and_check(TokenKind::Identifier);
+            self.consume_and_check(TokenKind::Equal);
+            let expr = self.parse_expression();
+            let temp = ASTExpression::assignment(identifier, expr);
+            return temp;
         }
         return self.parse_binary_expression(0);
     }
@@ -194,14 +194,14 @@ impl<'de> Parser<'de> {
             }
             TokenKind::Identifier => {
                 if self.current().kind == TokenKind::LParen {
-                    self.parse_call_expression(token.clone())
+                    self.parse_call_expression(token)
                 } else {
-                    ASTExpression::identifier(token.clone())
+                    ASTExpression::identifier(token)
                 }
             }
             TokenKind::True | TokenKind::False => {
                 let value = token.kind == TokenKind::True;
-                ASTExpression::boolean(token.clone(), value)
+                ASTExpression::boolean(token, value)
             }
             _ => {
                 self.diagnostics_bag
@@ -253,24 +253,25 @@ impl<'de> Parser<'de> {
     }
 
     fn parse_if_statement(&mut self) -> ASTStatement<'de> {
-        let if_keyword = self.consume_and_check(TokenKind::If).clone();
+        let if_keyword = self.consume_and_check(TokenKind::If);
         let condition_expr = self.parse_expression();
         let then = self.parse_statement();
         let else_statement = self.parse_optional_else_statement();
         ASTStatement::if_statement(if_keyword, condition_expr, then, else_statement)
     }
+
     fn parse_optional_else_statement(&mut self) -> Option<ASTElseStatement<'de>> {
         if self.current().kind == TokenKind::Else {
-            let else_keyword = self.consume_and_check(TokenKind::Else).clone();
+            let else_keyword = self.consume_and_check(TokenKind::Else);
             let else_statement = self.parse_statement();
             return Some(ASTElseStatement::new(else_keyword, else_statement));
         }
-        return None;
+        None
     }
 
     fn parse_function_declaration(&mut self) -> ASTStatement<'de> {
         self.consume_and_check(TokenKind::Fun);
-        let identifier = self.consume_and_check(TokenKind::Identifier).clone();
+        let identifier = self.consume_and_check(TokenKind::Identifier);
         let parameters = self.parse_optional_parameter_list();
         let body = self.parse_statement();
         ASTStatement::func_decl_statement(identifier, parameters, body)
@@ -283,7 +284,7 @@ impl<'de> Parser<'de> {
         let mut parameters = Vec::new();
         while self.current().kind != TokenKind::RParen && !self.is_at_end() {
             parameters.push(FuncDeclParameter {
-                identifier: self.consume_and_check(TokenKind::Identifier).clone(),
+                identifier: self.consume_and_check(TokenKind::Identifier),
             });
             if self.current().kind == TokenKind::Comma {
                 self.consume_and_check(TokenKind::Comma);
@@ -294,14 +295,14 @@ impl<'de> Parser<'de> {
     }
 
     fn parse_return_statement(&mut self) -> ASTStatement<'de> {
-        let return_keyword = self.consume_and_check(TokenKind::Return).clone();
+        let return_keyword = self.consume_and_check(TokenKind::Return);
         // TODO: allow empty return statements
         let expression = self.parse_expression();
         ASTStatement::return_statement(return_keyword, Some(expression))
     }
 
     fn parse_while_statement(&mut self) -> ASTStatement<'de> {
-        let while_keyword = self.consume_and_check(TokenKind::While).clone();
+        let while_keyword = self.consume_and_check(TokenKind::While);
         let condition_expr = self.parse_expression();
         let body = self.parse_statement();
         ASTStatement::while_statement(while_keyword, condition_expr, body)
@@ -317,6 +318,6 @@ impl<'de> Parser<'de> {
             }
         }
         self.consume_and_check(TokenKind::RParen);
-        return ASTExpression::call(identifier.clone(), arguments);
+        return ASTExpression::call(identifier, arguments);
     }
 }

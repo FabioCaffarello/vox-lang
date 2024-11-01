@@ -46,8 +46,9 @@ fn main() -> miette::Result<()> {
                 println!("{token}");
             }
 
-            if any_cc_err {
-                std::process::exit(65);
+            match any_cc_err {
+                true => Err(miette::miette!("Encountered compilation errors")),
+                false => Ok(()),
             }
         }
         Commands::Parse { filename } => {
@@ -59,6 +60,7 @@ fn main() -> miette::Result<()> {
             match CompilationUnit::compile(&file_contents) {
                 Ok(mut compilation_unit) => {
                     compilation_unit.run(&global_scope);
+                    Ok(())
                 }
                 Err(_) => {
                     std::process::exit(65);
@@ -66,5 +68,21 @@ fn main() -> miette::Result<()> {
             }
         }
     }
-    Ok(())
 }
+
+// let input = "
+// let a = 1
+// if a > 0 {
+//     a = 20
+// }";
+
+// let global_scope = GlobalScope::new();
+// match CompilationUnit::compile(input) {
+//     Ok(mut compilation_unit) => {
+//         compilation_unit.run(&global_scope);
+//     }
+//     Err(_) => {
+//         std::process::exit(65);
+//     }
+// }
+// Ok(())

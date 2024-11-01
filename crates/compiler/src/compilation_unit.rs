@@ -35,7 +35,7 @@ impl<'de> CompilationUnit<'de> {
         }
 
         ast.visualize();
-        if let Err(_) = Self::check_diagnostics(&source_text, &diagnostics_bag) {
+        if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
         let mut global_symbol_resolver = GlobalSymbolResolver::new(Rc::clone(&diagnostics_bag));
@@ -44,7 +44,7 @@ impl<'de> CompilationUnit<'de> {
         let scopes = Scopes::from_global_scope(global_scope);
         let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes);
         ast.visit(&mut resolver);
-        if let Err(_) = Self::check_diagnostics(&source_text, &diagnostics_bag) {
+        if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
 

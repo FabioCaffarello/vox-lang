@@ -1,7 +1,8 @@
 use ast::ast::{
-    ASTBinaryExpression, ASTBooleanExpression, ASTFuncDeclStatement, ASTIfStatement,
-    ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression, ASTReturnStatement,
-    ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement, Ast,
+    ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
+    ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression,
+    ASTParenthesizedExpression, ASTReturnStatement, ASTUnaryExpression, ASTVariableExpression,
+    ASTWhileStatement, Ast,
 };
 use ast::visitor::ASTVisitor;
 use compiler::compilation_unit::CompilationUnit;
@@ -10,16 +11,16 @@ use text::span::TextSpan;
 #[derive(Debug, PartialEq)]
 enum TestASTNode {
     Number(f64),
+    Boolean(bool),
     Binary,
     Unary,
     Parenthesized,
     LetStmt,
+    Assignment,
+    Block,
     Variable(String),
     If,
     Else,
-    Assignment,
-    Block,
-    Boolean(bool),
     Func,
     While,
     Return,
@@ -134,6 +135,21 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         }
     }
 
+    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement<'de>) {
+        self.actual.push(TestASTNode::Block);
+        for statement in &block_statement.statements {
+            self.visit_statement(statement);
+        }
+    }
+
+    fn visit_assignment_expression(
+        &mut self,
+        assignment_expression: &ASTAssignmentExpression<'de>,
+    ) {
+        self.actual.push(TestASTNode::Assignment);
+        self.visit_expression(&assignment_expression.expression);
+    }
+
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
         self.actual.push(TestASTNode::Func);
         self.visit_statement(&func_decl_statement.body);
@@ -154,6 +170,13 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
 
     fn visit_boolean_expression(&mut self, boolean: &ASTBooleanExpression) {
         self.actual.push(TestASTNode::Boolean(boolean.value));
+    }
+
+    fn visit_call_expression(&mut self, call_expression: &ASTCallExpression<'de>) {
+        self.actual.push(TestASTNode::Call);
+        for argument in &call_expression.arguments {
+            self.visit_expression(argument);
+        }
     }
 
     fn visit_error(&mut self, _span: &TextSpan) {
@@ -380,5 +403,75 @@ pub fn should_parse_if_statement_with_else() {
         TestASTNode::Assignment,
         TestASTNode::Number(30.0),
     ];
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_while_statement() {
+    let input = "\
+        let a = 1
+        while a < 10 {
+            a = a + 1
+        }
+        ";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Number(1.0),
+        TestASTNode::While,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(10.0),
+        TestASTNode::Block,
+        TestASTNode::Assignment,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(1.0),
+    ];
+
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_function_declaration() {
+    let input = "\
+        func add(a, b) {
+            return a + b
+        }
+        ";
+    let expected = vec![
+        TestASTNode::Func,
+        TestASTNode::Block,
+        TestASTNode::Return,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Variable("b".to_string()),
+    ];
+
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_call_expression() {
+    let input = "\
+        func add(a, b) {
+            return a + b
+        }
+        add(2 * 3, 4 + 5)";
+    let expected = vec![
+        TestASTNode::Func,
+        TestASTNode::Block,
+        TestASTNode::Return,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Variable("b".to_string()),
+        TestASTNode::Call,
+        TestASTNode::Binary,
+        TestASTNode::Number(2.0),
+        TestASTNode::Number(3.0),
+        TestASTNode::Binary,
+        TestASTNode::Number(4.0),
+        TestASTNode::Number(5.0),
+    ];
+
     assert_tree(input, expected);
 }
