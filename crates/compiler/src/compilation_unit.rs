@@ -5,6 +5,7 @@ use ast::{
     evaluator::ASTEvaluator,
     scopes::{GlobalScope, Resolver, Scopes},
     validator::GlobalSymbolResolver,
+    ASTVisitor,
 };
 use diagnostics::{
     diagnostics::{DiagnosticsBag, DiagnosticsBagCell},
@@ -69,9 +70,15 @@ impl<'de> CompilationUnit<'de> {
         }
     }
 
-    pub fn run(&mut self, global_scope: &GlobalScope) {
-        let mut eval = ASTEvaluator::new(global_scope);
-        self.ast.visit(&mut eval);
+    pub fn run(&self) {
+        let mut eval = ASTEvaluator::new(&self.global_scope);
+        let main_function = self.global_scope.lookup_function("main");
+
+        if let Some(function) = main_function {
+            eval.visit_statement(&function.body);
+        } else {
+            self.ast.visit(&mut eval);
+        }
         println!("Result: {:?}", eval.last_value);
     }
 }

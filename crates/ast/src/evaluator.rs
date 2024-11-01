@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::ast::{
     ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperatorKind, ASTBlockStatement,
     ASTBooleanExpression, ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement,
-    ASTNumberExpression, ASTParenthesizedExpression, ASTStatement, ASTUnaryExpression,
-    ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement,
+    ASTNumberExpression, ASTParenthesizedExpression, ASTUnaryExpression, ASTUnaryOperatorKind,
+    ASTVariableExpression, ASTWhileStatement,
 };
 use crate::scopes::GlobalScope;
 use crate::visitor::ASTVisitor;
@@ -36,12 +36,15 @@ impl Frames {
             frames: vec![Frame::new()],
         }
     }
+
     fn push(&mut self) {
         self.frames.push(Frame::new());
     }
+
     fn pop(&mut self) {
         self.frames.pop();
     }
+
     fn update(&mut self, identifier: String, value: f64) {
         for frame in self.frames.iter_mut().rev() {
             if frame.variables.contains_key(&identifier) {
@@ -51,9 +54,11 @@ impl Frames {
         }
         panic!("Variable {} not found", identifier)
     }
+
     fn insert(&mut self, identifier: String, value: f64) {
         self.frames.last_mut().unwrap().insert(identifier, value);
     }
+
     fn get(&self, identifier: &String) -> Option<&f64> {
         for frame in self.frames.iter().rev() {
             if let Some(value) = frame.get(identifier) {
@@ -107,10 +112,6 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
             let_statement.identifier.span.literal.to_string(),
             self.last_value.unwrap(),
         );
-    }
-
-    fn visit_statement(&mut self, statement: &ASTStatement<'de>) {
-        self.do_visit_statement(statement);
     }
 
     fn visit_variable_expression(&mut self, variable_expression: &ASTVariableExpression) {
