@@ -219,6 +219,7 @@ impl<'de> Lexer<'de> {
                 "return" => TokenKind::Return,
                 "true" => TokenKind::True,
                 "while" => TokenKind::While,
+                "break" => TokenKind::Break,
                 "split" => TokenKind::Split,
                 "join" => TokenKind::Join,
                 "map" => TokenKind::Map,

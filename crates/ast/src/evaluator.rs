@@ -1,13 +1,16 @@
 use std::collections::HashMap;
 
-use crate::ast::{
-    ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperatorKind, ASTBlockStatement,
-    ASTBooleanExpression, ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement,
-    ASTNumberExpression, ASTParenthesizedExpression, ASTUnaryExpression, ASTUnaryOperatorKind,
-    ASTVariableExpression, ASTWhileStatement,
-};
 use crate::scopes::GlobalScope;
 use crate::visitor::ASTVisitor;
+use crate::{
+    ast::{
+        ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperatorKind, ASTBlockStatement,
+        ASTBooleanExpression, ASTBreakStatement, ASTCallExpression, ASTFuncDeclStatement,
+        ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
+        ASTUnaryExpression, ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement,
+    },
+    loops::Loops,
+};
 use text::span::TextSpan;
 
 pub struct Frame {
@@ -73,6 +76,8 @@ pub struct ASTEvaluator<'de> {
     pub last_value: Option<f64>,
     pub frames: Frames,
     pub global_scope: &'de GlobalScope<'de>,
+    should_break: bool,
+    loops: Loops,
 }
 
 impl<'de> ASTEvaluator<'de> {
@@ -81,6 +86,8 @@ impl<'de> ASTEvaluator<'de> {
             last_value: None,
             frames: Frames::new(),
             global_scope,
+            should_break: false,
+            loops: Loops::new(),
         }
     }
 
@@ -208,13 +215,32 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
 
     fn visit_func_decl_statement(&mut self, _func_decl_statement: &ASTFuncDeclStatement) {}
 
+    fn visit_break_statement(&mut self, _break_stmt: &ASTBreakStatement<'de>) {
+        self.should_break = true;
+    }
+
     fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement<'de>) {
+        let label = while_statement
+            .label
+            .as_ref()
+            .map(|token| token.span.literal.to_string());
+
+        if self.loops.push(label.clone()).is_err() {
+            panic!("Duplicate loop label '{}'", label.unwrap());
+        }
         self.push_frame();
         self.visit_expression(&while_statement.condition);
-        while self.last_value.unwrap() != 0 as f64 {
+
+        while self.last_value.unwrap() != 0_f64 {
             self.visit_statement(&while_statement.body);
             self.visit_expression(&while_statement.condition);
+            if self.should_break {
+                self.should_break = false;
+                self.loops.pop();
+                break;
+            }
         }
+
         self.pop_frame();
     }
 

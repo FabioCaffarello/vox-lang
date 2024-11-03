@@ -1,8 +1,9 @@
 use crate::ast::{
     ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
-    ASTCallExpression, ASTExpression, ASTExpressionKind, ASTFuncDeclStatement, ASTIfStatement,
-    ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression, ASTReturnStatement,
-    ASTStatement, ASTStatementKind, ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement,
+    ASTBreakStatement, ASTCallExpression, ASTExpression, ASTExpressionKind, ASTFuncDeclStatement,
+    ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
+    ASTReturnStatement, ASTStatement, ASTStatementKind, ASTUnaryExpression, ASTVariableExpression,
+    ASTWhileStatement,
 };
 use text::span::TextSpan;
 
@@ -14,6 +15,7 @@ pub trait ASTVisitor<'de> {
     fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>);
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>);
     fn visit_boolean_expression(&mut self, boolean: &ASTBooleanExpression<'de>);
+    fn visit_break_statement(&mut self, break_statement: &ASTBreakStatement<'de>);
 
     fn do_visit_statement(&mut self, statement: &ASTStatement<'de>) {
         match &statement.kind {
@@ -37,6 +39,9 @@ pub trait ASTVisitor<'de> {
             }
             ASTStatementKind::Return(stmt) => {
                 self.visit_return_statement(stmt);
+            }
+            ASTStatementKind::Break(break_stmt) => {
+                self.visit_break_statement(break_stmt);
             }
         }
     }

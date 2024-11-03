@@ -5,12 +5,14 @@ pub mod scopes;
 pub mod validator;
 pub mod visitor;
 
+mod loops;
+
 pub use ast::{
     ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperator, ASTBinaryOperatorKind,
-    ASTBlockStatement, ASTElseStatement, ASTExpression, ASTFuncDeclStatement, ASTIfStatement,
-    ASTLetStatement, ASTNumberExpression, ASTReturnStatement, ASTStatement, ASTStatementKind,
-    ASTUnaryOperator, ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement,
-    FuncDeclParameter,
+    ASTBlockStatement, ASTBreakStatement, ASTElseStatement, ASTExpression, ASTFuncDeclStatement,
+    ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTReturnStatement, ASTStatement,
+    ASTStatementKind, ASTUnaryOperator, ASTUnaryOperatorKind, ASTVariableExpression,
+    ASTWhileStatement, FuncDeclParameter,
 };
 pub use evaluator::ASTEvaluator;
 pub use printer::ASTPrinter;

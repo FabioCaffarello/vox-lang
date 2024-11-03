@@ -25,6 +25,7 @@ enum TestASTNode {
     While,
     Return,
     Call,
+    Break,
 }
 
 #[derive(Debug)]
@@ -160,6 +161,10 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         if let Some(expression) = &return_statement.return_value {
             self.visit_expression(expression);
         }
+    }
+
+    fn visit_break_statement(&mut self, _break_statement: &ast::ASTBreakStatement<'de>) {
+        self.actual.push(TestASTNode::Break);
     }
 
     fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement<'de>) {
@@ -426,6 +431,33 @@ pub fn should_parse_while_statement() {
         TestASTNode::Binary,
         TestASTNode::Variable("a".to_string()),
         TestASTNode::Number(1.0),
+    ];
+
+    assert_tree(input, expected);
+}
+
+#[test]
+pub fn should_parse_break_statement() {
+    let input = "\
+        let a = 1
+        while a < 10 {
+            a = a + 1
+            break
+        }
+        ";
+    let expected = vec![
+        TestASTNode::LetStmt,
+        TestASTNode::Number(1.0),
+        TestASTNode::While,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(10.0),
+        TestASTNode::Block,
+        TestASTNode::Assignment,
+        TestASTNode::Binary,
+        TestASTNode::Variable("a".to_string()),
+        TestASTNode::Number(1.0),
+        TestASTNode::Break,
     ];
 
     assert_tree(input, expected);

@@ -1,8 +1,8 @@
 use crate::ast::{
     ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
-    ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression,
-    ASTParenthesizedExpression, ASTReturnStatement, ASTStatement, ASTUnaryExpression,
-    ASTVariableExpression, ASTWhileStatement,
+    ASTBreakStatement, ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement,
+    ASTNumberExpression, ASTParenthesizedExpression, ASTReturnStatement, ASTStatement,
+    ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement,
 };
 use crate::visitor::ASTVisitor;
 use termion::color::{self, Fg, Reset};
@@ -106,6 +106,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
         ));
         self.add_whitespace();
         self.visit_expression(&binary_expression.right);
+        // self.add_newline();
     }
 
     fn visit_parenthesized_expression(
@@ -178,6 +179,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
         self.add_text("=");
         self.add_whitespace();
         self.visit_expression(&assignment_expression.expression);
+        self.add_newline();
     }
 
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement) {
@@ -219,6 +221,16 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
         self.visit_expression(&while_statement.condition);
         self.add_whitespace();
         self.visit_statement(&while_statement.body);
+        self.add_newline();
+    }
+
+    #[allow(clippy::useless_format)]
+    fn visit_break_statement(&mut self, break_stmt: &ASTBreakStatement<'de>) {
+        self.add_keyword("break");
+        if let Some(label) = &break_stmt.label {
+            self.add_whitespace();
+            self.add_keyword(format!("{}", label.span.literal).as_str());
+        }
     }
 
     fn visit_call_expression(&mut self, call_expression: &ASTCallExpression) {

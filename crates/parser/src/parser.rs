@@ -114,13 +114,38 @@ impl<'de> Parser<'de> {
     }
 
     fn parse_statement(&mut self) -> ASTStatement<'de> {
+        if self.current().kind == TokenKind::Identifier && self.peek(1).kind == TokenKind::Colon {
+            let label = self.consume_and_check(TokenKind::Identifier);
+            self.consume_and_check(TokenKind::Colon);
+            return self.parse_labeled_statement(label);
+        }
+        self.parse_statement_without_label()
+    }
+
+    fn parse_labeled_statement(&mut self, label: Token<'de>) -> ASTStatement<'de> {
+        match self.current().kind {
+            TokenKind::While => {
+                let while_stmt = self.parse_while_statement(Some(label));
+                while_stmt
+            }
+            _ => {
+                self.diagnostics_bag
+                    .borrow_mut()
+                    .report_unexpected_label(&label);
+                return self.parse_statement_without_label();
+            }
+        }
+    }
+
+    fn parse_statement_without_label(&mut self) -> ASTStatement<'de> {
         match self.current().kind {
             TokenKind::Let => self.parse_let_statement(),
             TokenKind::If => self.parse_if_statement(),
             TokenKind::LBrace => self.parse_block_statement(),
-            TokenKind::While => self.parse_while_statement(),
+            TokenKind::While => self.parse_while_statement(None),
             TokenKind::Fun => self.parse_function_declaration(),
             TokenKind::Return => self.parse_return_statement(),
+            TokenKind::Break => self.parse_break_statement(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -301,11 +326,21 @@ impl<'de> Parser<'de> {
         ASTStatement::return_statement(return_keyword, Some(expression))
     }
 
-    fn parse_while_statement(&mut self) -> ASTStatement<'de> {
+    fn parse_while_statement(&mut self, label: Option<Token<'de>>) -> ASTStatement<'de> {
         let while_keyword = self.consume_and_check(TokenKind::While);
         let condition_expr = self.parse_expression();
         let body = self.parse_statement();
-        ASTStatement::while_statement(while_keyword, condition_expr, body)
+        ASTStatement::while_statement(label, while_keyword, condition_expr, body)
+    }
+
+    fn parse_break_statement(&mut self) -> ASTStatement<'de> {
+        let break_keyword = self.consume_and_check(TokenKind::Break);
+        let label = if self.current().kind == TokenKind::Identifier {
+            Some(self.consume_and_check(TokenKind::Identifier))
+        } else {
+            None
+        };
+        ASTStatement::break_statement(break_keyword, label)
     }
 
     fn parse_call_expression(&mut self, identifier: Token<'de>) -> ASTExpression<'de> {

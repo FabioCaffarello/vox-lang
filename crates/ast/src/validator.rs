@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        ASTBooleanExpression, ASTFuncDeclStatement, ASTLetStatement, ASTNumberExpression,
-        ASTUnaryExpression, ASTVariableExpression,
+        ASTBooleanExpression, ASTBreakStatement, ASTFuncDeclStatement, ASTLetStatement,
+        ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression,
     },
     scopes::GlobalScope,
     visitor::ASTVisitor,
@@ -51,4 +51,5 @@ impl<'de> ASTVisitor<'de> for GlobalSymbolResolver<'de> {
     fn visit_boolean_expression(&mut self, _boolean: &ASTBooleanExpression) {}
     fn visit_error(&mut self, _span: &TextSpan) {}
     fn visit_unary_expression(&mut self, _unary_expression: &ASTUnaryExpression) {}
+    fn visit_break_statement(&mut self, _break_statement: &ASTBreakStatement<'de>) {}
 }

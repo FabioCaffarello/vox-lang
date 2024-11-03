@@ -45,6 +45,7 @@ pub enum ASTStatementKind<'de> {
     IfStatement(ASTIfStatement<'de>),
     BlockStatement(ASTBlockStatement<'de>),
     While(ASTWhileStatement<'de>),
+    Break(ASTBreakStatement<'de>),
     FuncDecl(ASTFuncDeclStatement<'de>),
     Return(ASTReturnStatement<'de>),
 }
@@ -91,14 +92,23 @@ impl<'de> ASTStatement<'de> {
     }
 
     pub fn while_statement(
+        label: Option<Token<'de>>,
         while_keyword: Token<'de>,
         condition: ASTExpression<'de>,
         body: ASTStatement<'de>,
     ) -> Self {
         ASTStatement::new(ASTStatementKind::While(ASTWhileStatement {
+            label,
             while_keyword,
             condition,
             body: Box::new(body),
+        }))
+    }
+
+    pub fn break_statement(break_keyword: Token<'de>, label: Option<Token<'de>>) -> Self {
+        ASTStatement::new(ASTStatementKind::Break(ASTBreakStatement {
+            break_keyword,
+            label,
         }))
     }
 
@@ -359,9 +369,16 @@ pub struct FuncDeclParameter<'de> {
 
 #[derive(Debug, Clone)]
 pub struct ASTWhileStatement<'de> {
+    pub label: Option<Token<'de>>,
     pub while_keyword: Token<'de>,
     pub condition: ASTExpression<'de>,
     pub body: Box<ASTStatement<'de>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ASTBreakStatement<'de> {
+    pub break_keyword: Token<'de>,
+    pub label: Option<Token<'de>>,
 }
 
 #[derive(Debug, Clone)]

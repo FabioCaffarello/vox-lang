@@ -105,4 +105,29 @@ impl<'de> DiagnosticsBag<'de> {
             token.span,
         );
     }
+
+    pub fn report_break_outside_loop(&mut self, token: &Token<'de>) {
+        self.report_error("Break statement outside of loop".to_string(), token.span);
+    }
+
+    pub fn report_undefined_label(&mut self, token: &Token<'de>) {
+        self.report_error(
+            format!("Undefined label '{}'", token.span.literal),
+            token.span,
+        );
+    }
+
+    pub fn report_unexpected_label(&mut self, token: &Token<'de>) {
+        self.report_error(
+            format!("Unexpected label '{}'", token.span.literal),
+            token.span,
+        );
+    }
+
+    pub fn report_duplicate_label(&mut self, token: &Token<'de>) {
+        self.report_error(
+            format!("Duplicate label '{}'", token.span.literal),
+            token.span,
+        );
+    }
 }

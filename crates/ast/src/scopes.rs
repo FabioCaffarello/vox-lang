@@ -1,14 +1,14 @@
-use std::collections::HashMap;
-
 use crate::{
     ast::{
-        ASTBlockStatement, ASTBooleanExpression, ASTCallExpression, ASTFuncDeclStatement,
-        ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTStatement, ASTUnaryExpression,
-        ASTVariableExpression,
+        ASTBlockStatement, ASTBooleanExpression, ASTBreakStatement, ASTCallExpression,
+        ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTStatement,
+        ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement,
     },
+    loops::Loops,
     visitor::ASTVisitor,
 };
 use diagnostics::diagnostics::DiagnosticsBagCell;
+use std::collections::HashMap;
 use text::span::TextSpan;
 
 #[derive(Debug)]
@@ -160,6 +160,7 @@ impl<'de> Scopes<'de> {
 pub struct Resolver<'de> {
     pub scopes: Scopes<'de>,
     diagnostics: DiagnosticsBagCell<'de>,
+    loops: Loops,
 }
 
 impl<'de> Resolver<'de> {
@@ -167,6 +168,7 @@ impl<'de> Resolver<'de> {
         Resolver {
             scopes,
             diagnostics,
+            loops: Loops::new(),
         }
     }
 }
@@ -219,6 +221,8 @@ impl<'de> ASTVisitor<'de> for GlobalSymbolResolver<'de> {
     fn visit_error(&mut self, _span: &TextSpan) {}
 
     fn visit_unary_expression(&mut self, _unary_expression: &ASTUnaryExpression) {}
+
+    fn visit_break_statement(&mut self, _break_statement: &ASTBreakStatement<'de>) {}
 }
 
 impl<'de> ASTVisitor<'de> for Resolver<'de> {
@@ -301,5 +305,58 @@ impl<'de> ASTVisitor<'de> for Resolver<'de> {
 
     fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>) {
         self.visit_expression(&unary_expression.operand);
+    }
+
+    fn visit_break_statement(&mut self, break_stmt: &ASTBreakStatement<'de>) {
+        if !self.loops.is_inside_loop() {
+            // Report 'break' outside of any loop
+            self.diagnostics
+                .borrow_mut()
+                .report_break_outside_loop(&break_stmt.break_keyword);
+            return;
+        }
+
+        if let Some(label_token) = &break_stmt.label {
+            let label = &label_token.span.literal;
+
+            // Check if the label exists in the active loops
+            if self.loops.find_label(label).is_none() {
+                // Report undefined label error
+                self.diagnostics
+                    .borrow_mut()
+                    .report_undefined_label(label_token);
+            }
+        }
+    }
+
+    fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement<'de>) {
+        // Extract the label if present
+        let label = while_statement
+            .label
+            .as_ref()
+            .map(|token| token.span.literal.to_string());
+
+        // Attempt to push the loop onto the Loops stack
+        if self.loops.push(label.clone()).is_err() {
+            // Report duplicate label error
+            self.diagnostics
+                .borrow_mut()
+                .report_duplicate_label(while_statement.label.as_ref().unwrap());
+        }
+
+        // Enter a new scope for the loop body
+        self.scopes.enter_scope();
+
+        // Visit the loop condition
+        self.visit_expression(&while_statement.condition);
+
+        // Visit the loop body
+        self.visit_statement(&while_statement.body);
+
+        // Exit the loop body scope
+        self.scopes.exit_scope();
+
+        // Pop the loop from the Loops stack
+        self.loops.pop();
     }
 }
