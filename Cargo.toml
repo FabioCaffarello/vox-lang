@@ -6,6 +6,7 @@ members = [
     "crates/diagnostics",
     "crates/lexer",
     "crates/parser",
+    "crates/support",
     "crates/text",
     ".",
 ]
