@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         ASTBooleanExpression, ASTBreakStatement, ASTFuncDeclStatement, ASTLetStatement,
-        ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression,
+        ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression, Ast,
     },
     scopes::GlobalScope,
     visitor::ASTVisitor,
@@ -9,21 +9,26 @@ use crate::{
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use text::span::TextSpan;
 
-pub struct GlobalSymbolResolver<'de> {
-    pub global_scope: GlobalScope<'de>,
+pub struct GlobalSymbolResolver<'a, 'de> {
+    pub global_scope: GlobalScope,
     diagnostics: DiagnosticsBagCell<'de>,
+    ast: &'a Ast<'de>,
 }
 
-impl<'de> GlobalSymbolResolver<'de> {
-    pub fn new(diagnostics: DiagnosticsBagCell<'de>) -> Self {
+impl<'a, 'de> GlobalSymbolResolver<'a, 'de> {
+    pub fn new(diagnostics: DiagnosticsBagCell<'de>, ast: &'a Ast<'de>) -> Self {
         Self {
+            ast,
             global_scope: GlobalScope::new(),
             diagnostics,
         }
     }
 }
 
-impl<'de> ASTVisitor<'de> for GlobalSymbolResolver<'de> {
+impl<'a, 'de> ASTVisitor<'de> for GlobalSymbolResolver<'a, 'de> {
+    fn get_ast(&self) -> &Ast<'de> {
+        self.ast
+    }
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
         let parameters = func_decl_statement
             .parameters

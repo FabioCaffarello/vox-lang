@@ -7,4 +7,5 @@ edition = "2021"
 diagnostics = { path = "../diagnostics" }
 lexer = { path = "../lexer" }
 text = { path = "../text" }
+support = { path = "../support" }
 termion = "4.0.3"

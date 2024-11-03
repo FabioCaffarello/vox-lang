@@ -7,7 +7,7 @@ use crate::{
         ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperatorKind, ASTBlockStatement,
         ASTBooleanExpression, ASTBreakStatement, ASTCallExpression, ASTFuncDeclStatement,
         ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
-        ASTUnaryExpression, ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement,
+        ASTUnaryExpression, ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement, Ast,
     },
     loops::Loops,
 };
@@ -72,17 +72,19 @@ impl Frames {
     }
 }
 
-pub struct ASTEvaluator<'de> {
+pub struct ASTEvaluator<'a, 'de> {
     pub last_value: Option<f64>,
     pub frames: Frames,
-    pub global_scope: &'de GlobalScope<'de>,
+    pub global_scope: &'de GlobalScope,
+    ast: &'a Ast<'de>,
     should_break: bool,
     loops: Loops,
 }
 
-impl<'de> ASTEvaluator<'de> {
-    pub fn new(global_scope: &'de GlobalScope<'de>) -> Self {
+impl<'a, 'de> ASTEvaluator<'a, 'de> {
+    pub fn new(global_scope: &'de GlobalScope, ast: &'a Ast<'de>) -> Self {
         Self {
+            ast,
             last_value: None,
             frames: Frames::new(),
             global_scope,
@@ -112,7 +114,11 @@ impl<'de> ASTEvaluator<'de> {
     }
 }
 
-impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
+impl<'a, 'de> ASTVisitor<'de> for ASTEvaluator<'a, 'de> {
+    fn get_ast(&self) -> &Ast<'de> {
+        self.ast
+    }
+
     fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
         self.visit_expression(&let_statement.initializer);
         self.frames.insert(
@@ -175,12 +181,12 @@ impl<'de> ASTVisitor<'de> for ASTEvaluator<'de> {
 
     fn visit_parenthesized_expression(
         &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression<'de>,
+        parenthesized_expression: &ASTParenthesizedExpression,
     ) {
         self.visit_expression(&parenthesized_expression.expression);
     }
 
-    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement<'de>) {
+    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement) {
         self.push_frame();
         for statement in &block_statement.statements {
             self.visit_statement(statement);

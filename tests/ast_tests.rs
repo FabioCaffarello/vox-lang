@@ -66,7 +66,7 @@ impl<'de> ASTVerifier<'de> {
 
     fn flatten_ast(&mut self) {
         self.actual.clear();
-        let ast = self.ast.clone();
+        let ast = &self.ast.clone();
         ast.visit(&mut *self);
     }
 
@@ -109,7 +109,7 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
 
     fn visit_parenthesized_expression(
         &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression<'de>,
+        parenthesized_expression: &ASTParenthesizedExpression,
     ) {
         self.actual.push(TestASTNode::Parenthesized);
         self.visit_expression(&parenthesized_expression.expression);
@@ -136,7 +136,7 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         }
     }
 
-    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement<'de>) {
+    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement) {
         self.actual.push(TestASTNode::Block);
         for statement in &block_statement.statements {
             self.visit_statement(statement);
@@ -186,6 +186,10 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
 
     fn visit_error(&mut self, _span: &TextSpan) {
         // do nothing
+    }
+
+    fn get_ast(&self) -> &Ast<'de> {
+        &self.ast
     }
 }
 

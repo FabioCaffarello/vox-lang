@@ -1,9 +1,9 @@
 use crate::ast::{
     ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
-    ASTBreakStatement, ASTCallExpression, ASTExpression, ASTExpressionKind, ASTFuncDeclStatement,
+    ASTBreakStatement, ASTCallExpression, ASTExprID, ASTExpressionKind, ASTFuncDeclStatement,
     ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTParenthesizedExpression,
-    ASTReturnStatement, ASTStatement, ASTStatementKind, ASTUnaryExpression, ASTVariableExpression,
-    ASTWhileStatement,
+    ASTReturnStatement, ASTStatementKind, ASTStmtID, ASTUnaryExpression, ASTVariableExpression,
+    ASTWhileStatement, Ast,
 };
 use text::span::TextSpan;
 
@@ -17,10 +17,13 @@ pub trait ASTVisitor<'de> {
     fn visit_boolean_expression(&mut self, boolean: &ASTBooleanExpression<'de>);
     fn visit_break_statement(&mut self, break_statement: &ASTBreakStatement<'de>);
 
-    fn do_visit_statement(&mut self, statement: &ASTStatement<'de>) {
+    fn get_ast(&self) -> &Ast<'de>;
+
+    fn do_visit_statement(&mut self, stmt_id: &ASTStmtID) {
+        let statement = self.get_ast().query_stmt(stmt_id).clone();
         match &statement.kind {
-            ASTStatementKind::Expression(expr) => {
-                self.visit_expression(expr);
+            ASTStatementKind::Expression(expr_id) => {
+                self.visit_expression(expr_id);
             }
             ASTStatementKind::LetStatement(expr) => {
                 self.visit_let_statement(expr);
@@ -46,11 +49,12 @@ pub trait ASTVisitor<'de> {
         }
     }
 
-    fn visit_statement(&mut self, statement: &ASTStatement<'de>) {
+    fn visit_statement(&mut self, statement: &ASTStmtID) {
         self.do_visit_statement(statement);
     }
 
-    fn do_visit_expression(&mut self, expression: &ASTExpression<'de>) {
+    fn do_visit_expression(&mut self, expr_id: &ASTExprID) {
+        let expression = self.get_ast().query_expr(expr_id).clone();
         match &expression.kind {
             ASTExpressionKind::NumberLiteral(number) => {
                 self.visit_number_expression(number);
@@ -82,8 +86,8 @@ pub trait ASTVisitor<'de> {
         }
     }
 
-    fn visit_expression(&mut self, expression: &ASTExpression<'de>) {
-        self.do_visit_expression(expression);
+    fn visit_expression(&mut self, expr_id: &ASTExprID) {
+        self.do_visit_expression(expr_id);
     }
 
     fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
@@ -93,7 +97,7 @@ pub trait ASTVisitor<'de> {
 
     fn visit_parenthesized_expression(
         &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression<'de>,
+        parenthesized_expression: &ASTParenthesizedExpression,
     ) {
         self.visit_expression(&parenthesized_expression.expression);
     }
@@ -106,7 +110,7 @@ pub trait ASTVisitor<'de> {
         }
     }
 
-    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement<'de>) {
+    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement) {
         for statement in &block_statement.statements {
             self.visit_statement(statement);
         }

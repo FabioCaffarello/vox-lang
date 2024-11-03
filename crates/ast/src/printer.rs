@@ -1,33 +1,29 @@
 use crate::ast::{
     ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
     ASTBreakStatement, ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement,
-    ASTNumberExpression, ASTParenthesizedExpression, ASTReturnStatement, ASTStatement,
-    ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement,
+    ASTNumberExpression, ASTParenthesizedExpression, ASTReturnStatement, ASTStmtID,
+    ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement, Ast,
 };
 use crate::visitor::ASTVisitor;
 use termion::color::{self, Fg, Reset};
 use text::span::TextSpan;
 
-pub struct ASTPrinter {
+pub struct ASTPrinter<'a, 'de> {
     indent: usize,
     pub result: String,
+    ast: &'a Ast<'de>,
 }
 
-impl Default for ASTPrinter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ASTPrinter {
+impl<'a, 'de> ASTPrinter<'a, 'de> {
     const NUMBER_COLOR: color::Cyan = color::Cyan;
     const TEXT_COLOR: color::LightWhite = color::LightWhite;
     const KEYWORD_COLOR: color::Magenta = color::Magenta;
     const VARIABLE_COLOR: color::Green = color::Green;
     const BOOLEAN_COLOR: color::Yellow = color::Yellow;
 
-    pub fn new() -> Self {
+    pub fn new(ast: &'a Ast<'de>) -> Self {
         Self {
+            ast,
             indent: 0,
             result: String::new(),
         }
@@ -70,7 +66,10 @@ impl ASTPrinter {
     }
 }
 
-impl<'de> ASTVisitor<'de> for ASTPrinter {
+impl<'a, 'de> ASTVisitor<'de> for ASTPrinter<'a, 'de> {
+    fn get_ast(&self) -> &Ast<'de> {
+        self.ast
+    }
     fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
         self.result
             .push_str(&format!("{}{}", Self::NUMBER_COLOR.fg_str(), number.number));
@@ -81,7 +80,7 @@ impl<'de> ASTVisitor<'de> for ASTPrinter {
             .push_str(&format!("{}{}", Self::TEXT_COLOR.fg_str(), span.literal));
     }
 
-    fn visit_statement(&mut self, statement: &ASTStatement) {
+    fn visit_statement(&mut self, statement: &ASTStmtID) {
         self.add_padding();
         ASTVisitor::do_visit_statement(self, statement);
         self.result.push_str(&format!("{}", Fg(Reset),));

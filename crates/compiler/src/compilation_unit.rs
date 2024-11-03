@@ -18,7 +18,7 @@ use text::source::SourceText;
 pub struct CompilationUnit<'de> {
     pub ast: Ast<'de>,
     pub diagnostics_bag: DiagnosticsBagCell<'de>,
-    pub global_scope: GlobalScope<'de>,
+    pub global_scope: GlobalScope,
 }
 
 impl<'de> CompilationUnit<'de> {
@@ -27,32 +27,30 @@ impl<'de> CompilationUnit<'de> {
         let diagnostics_bag: DiagnosticsBagCell = Rc::new(RefCell::new(DiagnosticsBag::new()));
         let diagnostics_rc = Rc::clone(&diagnostics_bag);
 
-        let mut parser = Parser::from_input(input, diagnostics_rc.clone())
+        let mut ast = Ast::new();
+        let mut parser = Parser::from_input(input, diagnostics_rc.clone(), &mut ast)
             .map_err(|_| diagnostics_bag.borrow().clone())?;
 
-        let mut ast = Ast::new();
-        while let Some(statement) = parser.next_statement() {
-            ast.add_statement(statement);
-        }
-
+        parser.parse();
         ast.visualize();
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
-        let mut global_symbol_resolver = GlobalSymbolResolver::new(Rc::clone(&diagnostics_bag));
+        let mut global_symbol_resolver =
+            GlobalSymbolResolver::new(Rc::clone(&diagnostics_bag), &ast);
         ast.visit(&mut global_symbol_resolver);
         let global_scope = global_symbol_resolver.global_scope;
         let scopes = Scopes::from_global_scope(global_scope);
-        let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes);
+        let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes, &ast);
         ast.visit(&mut resolver);
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
 
         Ok(CompilationUnit {
+            global_scope: resolver.scopes.global_scope,
             ast,
             diagnostics_bag,
-            global_scope: resolver.scopes.global_scope,
         })
     }
 
@@ -71,7 +69,7 @@ impl<'de> CompilationUnit<'de> {
     }
 
     pub fn run(&self) {
-        let mut eval = ASTEvaluator::new(&self.global_scope);
+        let mut eval = ASTEvaluator::new(&self.global_scope, &self.ast);
         let main_function = self.global_scope.lookup_function("main");
 
         if let Some(function) = main_function {

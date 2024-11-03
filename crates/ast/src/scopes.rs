@@ -1,8 +1,8 @@
 use crate::{
     ast::{
         ASTBlockStatement, ASTBooleanExpression, ASTBreakStatement, ASTCallExpression,
-        ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTStatement,
-        ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement,
+        ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression, ASTStmtID,
+        ASTUnaryExpression, ASTVariableExpression, ASTWhileStatement, Ast,
     },
     loops::Loops,
     visitor::ASTVisitor,
@@ -12,24 +12,24 @@ use std::collections::HashMap;
 use text::span::TextSpan;
 
 #[derive(Debug)]
-pub struct GlobalScope<'de> {
+pub struct GlobalScope {
     pub variables: HashMap<String, ()>,
-    pub functions: HashMap<String, FunctionSymbol<'de>>,
+    pub functions: HashMap<String, FunctionSymbol>,
 }
 
-impl<'de> Default for GlobalScope<'de> {
+impl Default for GlobalScope {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[derive(Debug)]
-pub struct FunctionSymbol<'de> {
+pub struct FunctionSymbol {
     pub parameters: Vec<String>,
-    pub body: ASTStatement<'de>,
+    pub body: ASTStmtID,
 }
 
-impl<'de> GlobalScope<'de> {
+impl GlobalScope {
     pub fn new() -> Self {
         GlobalScope {
             variables: HashMap::new(),
@@ -49,7 +49,7 @@ impl<'de> GlobalScope<'de> {
     pub fn declare_function(
         &mut self,
         identifier: &str,
-        function: &ASTStatement<'de>,
+        function_body_id: &ASTStmtID,
         parameters: Vec<String>,
     ) -> Result<(), ()> {
         if self.functions.contains_key(identifier) {
@@ -57,7 +57,7 @@ impl<'de> GlobalScope<'de> {
         }
         let function = FunctionSymbol {
             parameters,
-            body: function.clone(),
+            body: *function_body_id,
         };
         self.functions.insert(identifier.to_string(), function);
         Ok(())
@@ -90,18 +90,18 @@ impl LocalScope {
 }
 
 #[derive(Debug)]
-pub struct Scopes<'de> {
+pub struct Scopes {
     local_scopes: Vec<LocalScope>,
-    pub global_scope: GlobalScope<'de>,
+    pub global_scope: GlobalScope,
 }
 
-impl<'de> Default for Scopes<'de> {
+impl Default for Scopes {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'de> Scopes<'de> {
+impl Scopes {
     pub fn new() -> Self {
         Scopes {
             local_scopes: Vec::new(),
@@ -109,7 +109,7 @@ impl<'de> Scopes<'de> {
         }
     }
 
-    pub fn from_global_scope(global_scope: GlobalScope<'de>) -> Self {
+    pub fn from_global_scope(global_scope: GlobalScope) -> Self {
         Scopes {
             local_scopes: Vec::new(),
             global_scope,
@@ -157,15 +157,17 @@ impl<'de> Scopes<'de> {
 }
 
 #[derive(Debug)]
-pub struct Resolver<'de> {
-    pub scopes: Scopes<'de>,
+pub struct Resolver<'a, 'de> {
+    pub scopes: Scopes,
     diagnostics: DiagnosticsBagCell<'de>,
     loops: Loops,
+    ast: &'a Ast<'de>,
 }
 
-impl<'de> Resolver<'de> {
-    pub fn new(diagnostics: DiagnosticsBagCell<'de>, scopes: Scopes<'de>) -> Self {
+impl<'a, 'de> Resolver<'a, 'de> {
+    pub fn new(diagnostics: DiagnosticsBagCell<'de>, scopes: Scopes, ast: &'a Ast<'de>) -> Self {
         Resolver {
+            ast,
             scopes,
             diagnostics,
             loops: Loops::new(),
@@ -174,21 +176,27 @@ impl<'de> Resolver<'de> {
 }
 
 #[derive(Debug)]
-pub struct GlobalSymbolResolver<'de> {
+pub struct GlobalSymbolResolver<'a, 'de> {
     diagnostics: DiagnosticsBagCell<'de>,
-    global_scope: GlobalScope<'de>,
+    global_scope: GlobalScope,
+    ast: &'a Ast<'de>,
 }
 
-impl<'de> GlobalSymbolResolver<'de> {
-    pub fn new(diagnostics: DiagnosticsBagCell<'de>) -> Self {
+impl<'a, 'de> GlobalSymbolResolver<'a, 'de> {
+    pub fn new(diagnostics: DiagnosticsBagCell<'de>, ast: &'a Ast<'de>) -> Self {
         GlobalSymbolResolver {
+            ast,
             diagnostics,
             global_scope: GlobalScope::new(),
         }
     }
 }
 
-impl<'de> ASTVisitor<'de> for GlobalSymbolResolver<'de> {
+impl<'a, 'de> ASTVisitor<'de> for GlobalSymbolResolver<'a, 'de> {
+    fn get_ast(&self) -> &Ast<'de> {
+        self.ast
+    }
+
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
         let parameters = func_decl_statement
             .parameters
@@ -225,7 +233,11 @@ impl<'de> ASTVisitor<'de> for GlobalSymbolResolver<'de> {
     fn visit_break_statement(&mut self, _break_statement: &ASTBreakStatement<'de>) {}
 }
 
-impl<'de> ASTVisitor<'de> for Resolver<'de> {
+impl<'a, 'de> ASTVisitor<'de> for Resolver<'a, 'de> {
+    fn get_ast(&self) -> &Ast<'de> {
+        self.ast
+    }
+
     fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
         self.scopes.enter_scope();
         for parameter in &func_decl_statement.parameters {
@@ -236,7 +248,7 @@ impl<'de> ASTVisitor<'de> for Resolver<'de> {
         self.scopes.exit_scope();
     }
 
-    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement<'de>) {
+    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement) {
         self.scopes.enter_scope();
         for statement in &block_statement.statements {
             self.visit_statement(statement);
