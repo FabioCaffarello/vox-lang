@@ -1,13 +1,15 @@
 use crate::{
     ast::{
-        ASTBooleanExpression, ASTBreakStatement, ASTFuncDeclStatement, ASTLetStatement,
-        ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression, Ast,
+        ASTBooleanExpression, ASTBreakStatement, ASTExpression, ASTFuncDeclStatement,
+        ASTLetStatement, ASTNumberExpression, ASTUnaryExpression, ASTVariableExpression, Ast,
     },
-    scopes::GlobalScope,
+    scopes::{GlobalScope, VariableSymbol},
+    support::resolve_type_from_string,
     visitor::ASTVisitor,
 };
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use text::span::TextSpan;
+use typings::Type;
 
 pub struct GlobalSymbolResolver<'a, 'de> {
     pub global_scope: GlobalScope,
@@ -33,13 +35,28 @@ impl<'a, 'de> ASTVisitor<'de> for GlobalSymbolResolver<'a, 'de> {
         let parameters = func_decl_statement
             .parameters
             .iter()
-            .map(|parameter| parameter.identifier.span.literal.to_string())
+            .map(|parameter| {
+                VariableSymbol::new(
+                    parameter.identifier.span.literal.to_string(),
+                    resolve_type_from_string(
+                        &self.diagnostics,
+                        &parameter.type_annotation.type_name,
+                    ),
+                )
+            })
             .collect();
         let literal_span = &func_decl_statement.identifier.span;
+        let return_type = match &func_decl_statement.return_type {
+            Some(return_type) => {
+                resolve_type_from_string(&self.diagnostics, &return_type.type_name)
+            }
+            None => Type::Void,
+        };
         match self.global_scope.declare_function(
             literal_span.literal,
             &func_decl_statement.body,
             parameters,
+            return_type,
         ) {
             Ok(_) => {}
             Err(_) => {
@@ -51,10 +68,30 @@ impl<'a, 'de> ASTVisitor<'de> for GlobalSymbolResolver<'a, 'de> {
     }
 
     fn visit_let_statement(&mut self, _let_statement: &ASTLetStatement) {}
-    fn visit_variable_expression(&mut self, _variable_expression: &ASTVariableExpression) {}
-    fn visit_number_expression(&mut self, _number: &ASTNumberExpression) {}
-    fn visit_boolean_expression(&mut self, _boolean: &ASTBooleanExpression) {}
+    fn visit_variable_expression(
+        &mut self,
+        _variable_expression: &ASTVariableExpression,
+        _expr: &ASTExpression<'de>,
+    ) {
+    }
+    fn visit_number_expression(
+        &mut self,
+        _number: &ASTNumberExpression,
+        _expr: &ASTExpression<'de>,
+    ) {
+    }
+    fn visit_boolean_expression(
+        &mut self,
+        _boolean: &ASTBooleanExpression,
+        _expr: &ASTExpression<'de>,
+    ) {
+    }
     fn visit_error(&mut self, _span: &TextSpan) {}
-    fn visit_unary_expression(&mut self, _unary_expression: &ASTUnaryExpression) {}
+    fn visit_unary_expression(
+        &mut self,
+        _unary_expression: &ASTUnaryExpression,
+        _expr: &ASTExpression<'de>,
+    ) {
+    }
     fn visit_break_statement(&mut self, _break_statement: &ASTBreakStatement<'de>) {}
 }

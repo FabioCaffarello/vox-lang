@@ -1,7 +1,8 @@
 use crate::errors::ParserError;
 use ast::ast::{
-    ASTBinaryOperator, ASTBinaryOperatorKind, ASTElseStatement, ASTExpression, ASTStatement,
-    ASTUnaryOperator, ASTUnaryOperatorKind, Ast, FuncDeclParameter,
+    ASTBinaryOperator, ASTBinaryOperatorKind, ASTElseStatement, ASTExpression, ASTFuncReturnType,
+    ASTStatement, ASTUnaryOperator, ASTUnaryOperatorKind, Ast, FuncDeclParameter,
+    StaticTypeAnnotation,
 };
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
@@ -138,9 +139,11 @@ impl<'a, 'de> Parser<'a, 'de> {
     fn parse_let_statement(&mut self) -> &ASTStatement<'de> {
         self.consume_and_check(TokenKind::Let);
         let identifier = self.consume_and_check(TokenKind::Identifier);
+        let optional_type_annotation = self.parse_optional_type_annotation();
         self.consume_and_check(TokenKind::Equal);
         let expr = self.parse_expression().id;
-        self.ast.let_statement(identifier, expr)
+        self.ast
+            .let_statement(identifier, expr, optional_type_annotation)
     }
 
     fn parse_expression_statement(&mut self) -> &ASTStatement<'de> {
@@ -155,9 +158,9 @@ impl<'a, 'de> Parser<'a, 'de> {
     fn parse_assignment_expression(&mut self) -> &ASTExpression<'de> {
         if self.current().kind == TokenKind::Identifier && self.peek(1).kind == TokenKind::Equal {
             let identifier = self.consume_and_check(TokenKind::Identifier);
-            self.consume_and_check(TokenKind::Equal);
+            let equals = self.consume_and_check(TokenKind::Equal);
             let expr = self.parse_expression().id;
-            return self.ast.assignment_expression(identifier, expr);
+            return self.ast.assignment_expression(identifier, equals, expr);
         }
         return self.parse_binary_expression(0);
     }
@@ -189,11 +192,13 @@ impl<'a, 'de> Parser<'a, 'de> {
     fn parse_primary_expression(&mut self) -> &ASTExpression<'de> {
         let token = self.consume();
         match token.kind {
-            TokenKind::Number(number) => self.ast.number_literal_expression(number),
+            TokenKind::Number(number) => self.ast.number_literal_expression(number, token),
             TokenKind::LParen => {
                 let expr = self.parse_expression().id;
-                let _token = self.consume_and_check(TokenKind::RParen);
-                self.ast.parenthesized_expression(expr)
+                let left_paren = token;
+                let right_paren = self.consume_and_check(TokenKind::RParen);
+                self.ast
+                    .parenthesized_expression(left_paren, expr, right_paren)
             }
             TokenKind::Identifier => {
                 if self.current().kind == TokenKind::LParen {
@@ -277,8 +282,10 @@ impl<'a, 'de> Parser<'a, 'de> {
         self.consume_and_check(TokenKind::Fun);
         let identifier = self.consume_and_check(TokenKind::Identifier);
         let parameters = self.parse_optional_parameter_list();
+        let return_type = self.parse_optional_return_type_annotation();
         let body = self.parse_statement().id;
-        self.ast.func_decl_statement(identifier, parameters, body)
+        self.ast
+            .func_decl_statement(identifier, parameters, body, return_type)
     }
 
     fn parse_optional_parameter_list(&mut self) -> Vec<FuncDeclParameter<'de>> {
@@ -290,6 +297,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         while self.current().kind != TokenKind::RParen && !self.is_at_end() {
             parameters.push(FuncDeclParameter {
                 identifier: self.consume_and_check(TokenKind::Identifier),
+                type_annotation: self.parse_type_annotation(),
             });
             if self.current().kind == TokenKind::Comma {
                 self.consume_and_check(TokenKind::Comma);
@@ -325,7 +333,7 @@ impl<'a, 'de> Parser<'a, 'de> {
     }
 
     fn parse_call_expression(&mut self, identifier: Token<'de>) -> &ASTExpression<'de> {
-        self.consume_and_check(TokenKind::LParen);
+        let left_paren = self.consume_and_check(TokenKind::LParen);
         let mut arguments = Vec::new();
         while self.current().kind != TokenKind::RParen && !self.is_at_end() {
             arguments.push(self.parse_expression().id);
@@ -333,7 +341,30 @@ impl<'a, 'de> Parser<'a, 'de> {
                 self.consume_and_check(TokenKind::Comma);
             }
         }
-        self.consume_and_check(TokenKind::RParen);
-        self.ast.call_expression(identifier, arguments)
+        let right_paren = self.consume_and_check(TokenKind::RParen);
+        self.ast
+            .call_expression(identifier, left_paren, right_paren, arguments)
+    }
+
+    fn parse_optional_type_annotation(&mut self) -> Option<StaticTypeAnnotation<'de>> {
+        if self.current().kind == TokenKind::Colon {
+            return Some(self.parse_type_annotation());
+        }
+        None
+    }
+
+    fn parse_type_annotation(&mut self) -> StaticTypeAnnotation<'de> {
+        let colon = self.consume_and_check(TokenKind::Colon);
+        let type_name = self.consume_and_check(TokenKind::Identifier);
+        return StaticTypeAnnotation::new(colon, type_name);
+    }
+
+    fn parse_optional_return_type_annotation(&mut self) -> Option<ASTFuncReturnType<'de>> {
+        if self.current().kind == TokenKind::Arrow {
+            let arrow = self.consume_and_check(TokenKind::Arrow);
+            let type_name = self.consume_and_check(TokenKind::Identifier);
+            return Some(ASTFuncReturnType::new(arrow, type_name));
+        }
+        None
     }
 }

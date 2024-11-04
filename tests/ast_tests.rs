@@ -5,6 +5,7 @@ use ast::ast::{
     ASTWhileStatement, Ast,
 };
 use ast::visitor::ASTVisitor;
+use ast::ASTExpression;
 use compiler::compilation_unit::CompilationUnit;
 use text::span::TextSpan;
 
@@ -92,7 +93,11 @@ impl<'de> ASTVerifier<'de> {
 }
 
 impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
-    fn visit_number_expression(&mut self, number: &ASTNumberExpression) {
+    fn visit_number_expression(
+        &mut self,
+        number: &ASTNumberExpression,
+        _expr: &ASTExpression<'de>,
+    ) {
         self.actual.push(TestASTNode::Number(number.number));
     }
 
@@ -101,7 +106,11 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         self.visit_expression(&let_statement.initializer);
     }
 
-    fn visit_variable_expression(&mut self, _variable_expression: &ASTVariableExpression<'de>) {
+    fn visit_variable_expression(
+        &mut self,
+        _variable_expression: &ASTVariableExpression<'de>,
+        _expr: &ASTExpression<'de>,
+    ) {
         self.actual.push(TestASTNode::Variable(
             _variable_expression.identifier.to_string(),
         ));
@@ -110,18 +119,27 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
     fn visit_parenthesized_expression(
         &mut self,
         parenthesized_expression: &ASTParenthesizedExpression,
+        _expr: &ASTExpression<'de>,
     ) {
         self.actual.push(TestASTNode::Parenthesized);
         self.visit_expression(&parenthesized_expression.expression);
     }
 
-    fn visit_binary_expression(&mut self, binary_expression: &ASTBinaryExpression<'de>) {
+    fn visit_binary_expression(
+        &mut self,
+        binary_expression: &ASTBinaryExpression<'de>,
+        _expr: &ASTExpression<'de>,
+    ) {
         self.actual.push(TestASTNode::Binary);
         self.visit_expression(&binary_expression.left);
         self.visit_expression(&binary_expression.right);
     }
 
-    fn visit_unary_expression(&mut self, unary_expression: &ASTUnaryExpression<'de>) {
+    fn visit_unary_expression(
+        &mut self,
+        unary_expression: &ASTUnaryExpression<'de>,
+        _expr: &ASTExpression<'de>,
+    ) {
         self.actual.push(TestASTNode::Unary);
         self.visit_expression(&unary_expression.operand);
     }
@@ -146,6 +164,7 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
     fn visit_assignment_expression(
         &mut self,
         assignment_expression: &ASTAssignmentExpression<'de>,
+        _expr: &ASTExpression<'de>,
     ) {
         self.actual.push(TestASTNode::Assignment);
         self.visit_expression(&assignment_expression.expression);
@@ -173,11 +192,19 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
         self.visit_statement(&while_statement.body);
     }
 
-    fn visit_boolean_expression(&mut self, boolean: &ASTBooleanExpression) {
+    fn visit_boolean_expression(
+        &mut self,
+        boolean: &ASTBooleanExpression,
+        _expr: &ASTExpression<'de>,
+    ) {
         self.actual.push(TestASTNode::Boolean(boolean.value));
     }
 
-    fn visit_call_expression(&mut self, call_expression: &ASTCallExpression<'de>) {
+    fn visit_call_expression(
+        &mut self,
+        call_expression: &ASTCallExpression<'de>,
+        _expr: &ASTExpression<'de>,
+    ) {
         self.actual.push(TestASTNode::Call);
         for argument in &call_expression.arguments {
             self.visit_expression(argument);
@@ -470,7 +497,7 @@ pub fn should_parse_break_statement() {
 #[test]
 pub fn should_parse_function_declaration() {
     let input = "\
-        func add(a, b) {
+        func add(a: float, b: float) -> float {
             return a + b
         }
         ";
@@ -489,7 +516,7 @@ pub fn should_parse_function_declaration() {
 #[test]
 pub fn should_parse_call_expression() {
     let input = "\
-        func add(a, b) {
+        func add(a: float, b: float) -> float {
             return a + b
         }
         add(2 * 3, 4 + 5)";

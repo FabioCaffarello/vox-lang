@@ -8,6 +8,7 @@ members = [
     "crates/parser",
     "crates/support",
     "crates/text",
+    "crates/typings",
     ".",
 ]
 

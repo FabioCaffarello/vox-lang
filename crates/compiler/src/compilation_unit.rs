@@ -41,8 +41,8 @@ impl<'de> CompilationUnit<'de> {
         ast.visit(&mut global_symbol_resolver);
         let global_scope = global_symbol_resolver.global_scope;
         let scopes = Scopes::from_global_scope(global_scope);
-        let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes, &ast);
-        ast.visit(&mut resolver);
+        let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes, &mut ast);
+        resolver.resolve();
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }

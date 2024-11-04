@@ -75,6 +75,7 @@ dependencies = [
  "support",
  "termion",
  "text",
+ "typings",
 ]
 
 [[package]]
@@ -189,6 +190,7 @@ dependencies = [
  "lexer",
  "termion",
  "text",
+ "typings",
 ]
 
 [[package]]
@@ -492,6 +494,10 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "typings"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"

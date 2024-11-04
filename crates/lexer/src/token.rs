@@ -62,6 +62,7 @@ pub enum TokenKind {
     Less,
     LessEqual,
     // Others
+    Arrow,
     Identifier,
     LineComment,
     BlockComment,
@@ -124,6 +125,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Reduce => write!(f, "REDUCE"),
             TokenKind::Replace => write!(f, "REPLACE"),
             TokenKind::Extract => write!(f, "EXTRACT"),
+            TokenKind::Arrow => write!(f, "ARROW"),
             TokenKind::LineComment => write!(f, "LINE_COMMENT"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT"),
             TokenKind::Let => write!(f, "LET"),
@@ -210,6 +212,7 @@ impl fmt::Display for Token<'_> {
             TokenKind::Less => write!(f, "LESS {literal} null"),
             TokenKind::LessEqual => write!(f, "LESS_EQUAL {literal} null"),
             // Others
+            TokenKind::Arrow => write!(f, "ARROW {literal} null"),
             TokenKind::LineComment => write!(f, "LINE_COMMENT {literal} null"),
             TokenKind::BlockComment => write!(f, "BLOCK_COMMENT {literal} null"),
             TokenKind::Bad => write!(f, "BAD {literal} null"),
