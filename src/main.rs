@@ -56,7 +56,7 @@ fn main() -> miette::Result<()> {
                 .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
 
             match CompilationUnit::compile(&file_contents) {
-                Ok(compilation_unit) => {
+                Ok(mut compilation_unit) => {
                     compilation_unit.run();
                 }
                 Err(_) => {
@@ -140,7 +140,7 @@ fn main() -> miette::Result<()> {
 
     // match CompilationUnit::compile(input) {
     //     Ok(compilation_unit) => {
-    //         compilation_unit.run();
+    //         mut compilation_unit.run();
     //     }
     //     Err(_) => {
     //         std::process::exit(65);
