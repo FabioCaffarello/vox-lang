@@ -1,11 +1,9 @@
 use ast::ast::{
-    ASTAssignmentExpression, ASTBinaryExpression, ASTBlockStatement, ASTBooleanExpression,
-    ASTCallExpression, ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression,
-    ASTParenthesizedExpression, ASTReturnStatement, ASTUnaryExpression, ASTVariableExpression,
-    ASTWhileStatement, Ast,
+    AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, CallExpr, FunctionDeclaration, IfExpr,
+    LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, UnaryExpr, VariableExpr, WhileStmt,
 };
-use ast::visitor::ASTVisitor;
-use ast::ASTExpression;
+use ast::visitor::Visitor;
+use ast::{Expression, Statement};
 use compiler::compilation_unit::CompilationUnit;
 use text::span::TextSpan;
 
@@ -67,7 +65,7 @@ impl<'de> ASTVerifier<'de> {
 
     fn flatten_ast(&mut self) {
         self.actual.clear();
-        let ast = &self.ast.clone();
+        let mut ast = self.ast.clone();
         ast.visit(&mut *self);
     }
 
@@ -92,24 +90,31 @@ impl<'de> ASTVerifier<'de> {
     }
 }
 
-impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
+impl<'de> Visitor<'de> for ASTVerifier<'de> {
     fn visit_number_expression(
         &mut self,
-        number: &ASTNumberExpression,
-        _expr: &ASTExpression<'de>,
+        _ast: &mut Ast<'de>,
+        number: &NumberExpr,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Number(number.number));
     }
 
-    fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
+    fn visit_let_statement(
+        &mut self,
+        ast: &mut Ast<'de>,
+        let_statement: &LetStmt<'de>,
+        _stmt: &Statement<'de>,
+    ) {
         self.actual.push(TestASTNode::LetStmt);
-        self.visit_expression(&let_statement.initializer);
+        self.visit_expression(ast, &let_statement.initializer);
     }
 
     fn visit_variable_expression(
         &mut self,
-        _variable_expression: &ASTVariableExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        _ast: &mut Ast<'de>,
+        _variable_expression: &VariableExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Variable(
             _variable_expression.identifier.to_string(),
@@ -118,105 +123,125 @@ impl<'de> ASTVisitor<'de> for ASTVerifier<'de> {
 
     fn visit_parenthesized_expression(
         &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        parenthesized_expression: &ParenthesizedExpr,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Parenthesized);
-        self.visit_expression(&parenthesized_expression.expression);
+        self.visit_expression(ast, &parenthesized_expression.expression);
     }
 
     fn visit_binary_expression(
         &mut self,
-        binary_expression: &ASTBinaryExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        binary_expression: &BinaryExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Binary);
-        self.visit_expression(&binary_expression.left);
-        self.visit_expression(&binary_expression.right);
+        self.visit_expression(ast, &binary_expression.left);
+        self.visit_expression(ast, &binary_expression.right);
     }
 
     fn visit_unary_expression(
         &mut self,
-        unary_expression: &ASTUnaryExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        unary_expression: &UnaryExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Unary);
-        self.visit_expression(&unary_expression.operand);
+        self.visit_expression(ast, &unary_expression.operand);
     }
 
-    fn visit_if_statement(&mut self, if_statement: &ASTIfStatement<'de>) {
+    fn visit_if_expression(
+        &mut self,
+        ast: &mut Ast<'de>,
+        if_expression: &IfExpr<'de>,
+        _expr: &Expression<'de>,
+    ) {
         self.actual.push(TestASTNode::If);
-        self.visit_expression(&if_statement.condition);
-        self.visit_statement(&if_statement.then_branch);
-        if let Some(else_branch) = &if_statement.else_branch {
+        self.visit_expression(ast, &if_expression.condition);
+        self.visit_expression(ast, &if_expression.then_branch);
+        if let Some(else_branch) = &if_expression.else_branch {
             self.actual.push(TestASTNode::Else);
-            self.visit_statement(&else_branch.else_statement);
+            self.visit_expression(ast, &else_branch.expr);
         }
     }
 
-    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement) {
+    fn visit_block_expression(
+        &mut self,
+        ast: &mut Ast<'de>,
+        block_statement: &BlockExpr,
+        _expr: &Expression<'de>,
+    ) {
         self.actual.push(TestASTNode::Block);
         for statement in &block_statement.statements {
-            self.visit_statement(statement);
+            self.visit_statement(ast, *statement);
         }
     }
 
     fn visit_assignment_expression(
         &mut self,
-        assignment_expression: &ASTAssignmentExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        assignment_expression: &AssignmentExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Assignment);
-        self.visit_expression(&assignment_expression.expression);
+        self.visit_expression(ast, &assignment_expression.expression);
     }
 
-    fn visit_func_decl_statement(&mut self, func_decl_statement: &ASTFuncDeclStatement<'de>) {
+    fn visit_function_declaration(
+        &mut self,
+        ast: &mut Ast<'de>,
+        func_decl: &FunctionDeclaration<'de>,
+    ) {
         self.actual.push(TestASTNode::Func);
-        self.visit_statement(&func_decl_statement.body);
+        self.visit_statement(ast, func_decl.body);
     }
 
-    fn visit_return_statement(&mut self, return_statement: &ASTReturnStatement<'de>) {
+    fn visit_return_statement(&mut self, ast: &mut Ast<'de>, return_statement: &ReturnStmt<'de>) {
         self.actual.push(TestASTNode::Return);
         if let Some(expression) = &return_statement.return_value {
-            self.visit_expression(expression);
+            self.visit_expression(ast, expression);
         }
     }
 
-    fn visit_break_statement(&mut self, _break_statement: &ast::ASTBreakStatement<'de>) {
+    fn visit_break_statement(
+        &mut self,
+        _ast: &mut Ast<'de>,
+        _break_statement: &ast::BreakStmt<'de>,
+    ) {
         self.actual.push(TestASTNode::Break);
     }
 
-    fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement<'de>) {
+    fn visit_while_statement(&mut self, ast: &mut Ast<'de>, while_statement: &WhileStmt<'de>) {
         self.actual.push(TestASTNode::While);
-        self.visit_expression(&while_statement.condition);
-        self.visit_statement(&while_statement.body);
+        self.visit_expression(ast, &while_statement.condition);
+        self.visit_expression(ast, &while_statement.body);
     }
 
     fn visit_boolean_expression(
         &mut self,
-        boolean: &ASTBooleanExpression,
-        _expr: &ASTExpression<'de>,
+        _ast: &mut Ast<'de>,
+        boolean: &BooleanExpr,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Boolean(boolean.value));
     }
 
     fn visit_call_expression(
         &mut self,
-        call_expression: &ASTCallExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        call_expression: &CallExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
         self.actual.push(TestASTNode::Call);
         for argument in &call_expression.arguments {
-            self.visit_expression(argument);
+            self.visit_expression(ast, argument);
         }
     }
 
-    fn visit_error(&mut self, _span: &TextSpan) {
+    fn visit_error(&mut self, _ast: &mut Ast<'de>, _span: &TextSpan) {
         // do nothing
-    }
-
-    fn get_ast(&self) -> &Ast<'de> {
-        &self.ast
     }
 }
 
