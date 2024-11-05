@@ -1,9 +1,12 @@
 use crate::errors::ParserError;
-use ast::{ast::{
-    Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch, ExprID,
-    Expression, FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement,
-    StaticTypeAnnotation, UnaryOperator, UnaryOperatorKind,
-}, StmtID};
+use ast::{
+    ast::{
+        Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch, ExprID,
+        Expression, FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement,
+        StaticTypeAnnotation, UnaryOperator, UnaryOperatorKind,
+    },
+    StmtID,
+};
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
@@ -134,7 +137,7 @@ impl<'a, 'de> Parser<'a, 'de> {
                 self.diagnostics_bag
                     .borrow_mut()
                     .report_unexpected_label(&label);
-                return self.parse_statement_without_label();
+                self.parse_statement_without_label()
             }
         }
     }
