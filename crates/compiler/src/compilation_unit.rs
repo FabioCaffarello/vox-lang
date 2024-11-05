@@ -2,10 +2,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use ast::{
     ast::Ast,
-    evaluator::ASTEvaluator,
+    evaluator::Evaluator,
     scopes::{GlobalScope, Resolver, Scopes},
     validator::GlobalSymbolResolver,
-    ASTVisitor,
+    Visitor,
 };
 use diagnostics::{
     diagnostics::{DiagnosticsBag, DiagnosticsBagCell},
@@ -36,13 +36,12 @@ impl<'de> CompilationUnit<'de> {
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
-        let mut global_symbol_resolver =
-            GlobalSymbolResolver::new(Rc::clone(&diagnostics_bag), &ast);
+        let mut global_symbol_resolver = GlobalSymbolResolver::new(Rc::clone(&diagnostics_bag));
         ast.visit(&mut global_symbol_resolver);
         let global_scope = global_symbol_resolver.global_scope;
         let scopes = Scopes::from_global_scope(global_scope);
-        let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes, &mut ast);
-        resolver.resolve();
+        let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes);
+        resolver.resolve(&mut ast);
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
@@ -68,12 +67,13 @@ impl<'de> CompilationUnit<'de> {
         }
     }
 
-    pub fn run(&self) {
-        let mut eval = ASTEvaluator::new(&self.global_scope, &self.ast);
+    pub fn run(&mut self) {
+        let mut eval = Evaluator::new(&self.global_scope);
         let main_function = self.global_scope.lookup_function("main");
 
         if let Some(function) = main_function {
-            eval.visit_statement(&function.body);
+            let function = self.global_scope.functions.get(function);
+            eval.visit_statement(&mut self.ast, function.body);
         } else {
             self.ast.visit(&mut eval);
         }
