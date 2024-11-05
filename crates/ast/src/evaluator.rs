@@ -1,21 +1,19 @@
 use std::collections::HashMap;
 
-use crate::scopes::GlobalScope;
-use crate::visitor::ASTVisitor;
+use crate::scopes::{GlobalScope, VariableIdx};
+use crate::visitor::Visitor;
 use crate::{
     ast::{
-        ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperatorKind, ASTBlockStatement,
-        ASTBooleanExpression, ASTBreakStatement, ASTCallExpression, ASTExpression,
-        ASTFuncDeclStatement, ASTIfStatement, ASTLetStatement, ASTNumberExpression,
-        ASTParenthesizedExpression, ASTUnaryExpression, ASTUnaryOperatorKind,
-        ASTVariableExpression, ASTWhileStatement, Ast,
+        AssignmentExpr, Ast, BinaryExpr, BinaryOperatorKind, BlockExpr, BooleanExpr, BreakStmt,
+        CallExpr, Expression, FunctionDeclaration, IfExpr, LetStmt, NumberExpr, ParenthesizedExpr,
+        Statement, UnaryExpr, UnaryOperatorKind, VariableExpr, WhileStmt,
     },
     loops::Loops,
 };
 use text::span::TextSpan;
 
 pub struct Frame {
-    variables: HashMap<String, f64>,
+    variables: HashMap<VariableIdx, f64>,
 }
 
 impl Frame {
@@ -24,11 +22,13 @@ impl Frame {
             variables: HashMap::new(),
         }
     }
-    fn insert(&mut self, identifier: String, value: f64) {
-        self.variables.insert(identifier, value);
+
+    fn insert(&mut self, idx: VariableIdx, value: f64) {
+        self.variables.insert(idx, value);
     }
-    fn get(&self, identifier: &String) -> Option<&f64> {
-        self.variables.get(identifier)
+
+    fn get(&self, idx: &VariableIdx) -> Option<&f64> {
+        self.variables.get(idx)
     }
 }
 pub struct Frames {
@@ -49,23 +49,22 @@ impl Frames {
         self.frames.pop();
     }
 
-    fn update(&mut self, identifier: String, value: f64) {
+    fn update(&mut self, idx: VariableIdx, value: f64) {
         for frame in self.frames.iter_mut().rev() {
-            if frame.variables.contains_key(&identifier) {
-                frame.insert(identifier, value);
+            if frame.variables.contains_key(&idx) {
+                frame.insert(idx, value);
                 return;
             }
         }
-        panic!("Variable {} not found", identifier)
     }
 
-    fn insert(&mut self, identifier: String, value: f64) {
-        self.frames.last_mut().unwrap().insert(identifier, value);
+    fn insert(&mut self, idx: VariableIdx, value: f64) {
+        self.frames.last_mut().unwrap().insert(idx, value);
     }
 
-    fn get(&self, identifier: &String) -> Option<&f64> {
+    fn get(&self, idx: &VariableIdx) -> Option<&f64> {
         for frame in self.frames.iter().rev() {
-            if let Some(value) = frame.get(identifier) {
+            if let Some(value) = frame.get(idx) {
                 return Some(value);
             }
         }
@@ -73,19 +72,17 @@ impl Frames {
     }
 }
 
-pub struct ASTEvaluator<'a, 'de> {
+pub struct Evaluator<'a> {
     pub last_value: Option<f64>,
     pub frames: Frames,
-    pub global_scope: &'de GlobalScope,
-    ast: &'a Ast<'de>,
+    pub global_scope: &'a GlobalScope,
     should_break: bool,
     loops: Loops,
 }
 
-impl<'a, 'de> ASTEvaluator<'a, 'de> {
-    pub fn new(global_scope: &'de GlobalScope, ast: &'a Ast<'de>) -> Self {
+impl<'a> Evaluator<'a> {
+    pub fn new(global_scope: &'a GlobalScope) -> Self {
         Self {
-            ast,
             last_value: None,
             frames: Frames::new(),
             global_scope,
@@ -115,82 +112,83 @@ impl<'a, 'de> ASTEvaluator<'a, 'de> {
     }
 }
 
-impl<'a, 'de> ASTVisitor<'de> for ASTEvaluator<'a, 'de> {
-    fn get_ast(&self) -> &Ast<'de> {
-        self.ast
-    }
-
-    fn visit_let_statement(&mut self, let_statement: &ASTLetStatement<'de>) {
-        self.visit_expression(&let_statement.initializer);
-        self.frames.insert(
-            let_statement.identifier.span.literal.to_string(),
-            self.last_value.unwrap(),
-        );
+impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
+    fn visit_let_statement(
+        &mut self,
+        ast: &mut Ast<'de>,
+        let_statement: &LetStmt<'de>,
+        _stmt: &Statement<'de>,
+    ) {
+        self.visit_expression(ast, &let_statement.initializer);
+        self.frames
+            .insert(let_statement.variable_idx, self.last_value.unwrap());
     }
 
     fn visit_variable_expression(
         &mut self,
-        variable_expression: &ASTVariableExpression,
-        _expr: &ASTExpression<'de>,
+        _ast: &mut Ast<'de>,
+        variable_expression: &VariableExpr,
+        _expr: &Expression<'de>,
     ) {
         let identifier = variable_expression.identifier.span.literal;
         self.last_value = Some(
             *self
                 .frames
-                .get(&identifier.to_string())
+                .get(&variable_expression.variable_idx)
                 .unwrap_or_else(|| panic!("Variable {} not found", identifier)),
         );
     }
 
     fn visit_number_expression(
         &mut self,
-        number: &ASTNumberExpression,
-        _expr: &ASTExpression<'de>,
+        _ast: &mut Ast<'de>,
+        number: &NumberExpr,
+        _expr: &Expression<'de>,
     ) {
         self.last_value = Some(number.number);
     }
 
     fn visit_unary_expression(
         &mut self,
-        unary_expr: &ASTUnaryExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        unary_expr: &UnaryExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
-        self.visit_expression(&unary_expr.operand);
+        self.visit_expression(ast, &unary_expr.operand);
         let operand = self.last_value.unwrap();
         self.last_value = Some(match unary_expr.operator.kind {
-            ASTUnaryOperatorKind::Minus => -operand,
+            UnaryOperatorKind::Minus => -operand,
         });
     }
 
     fn visit_binary_expression(
         &mut self,
-        binary_expr: &ASTBinaryExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        binary_expr: &BinaryExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
-        self.visit_expression(&binary_expr.left);
+        self.visit_expression(ast, &binary_expr.left);
         let left = self.last_value.unwrap();
-        self.visit_expression(&binary_expr.right);
+        self.visit_expression(ast, &binary_expr.right);
         let right = self.last_value.unwrap();
         self.last_value = Some(match binary_expr.operator.kind {
-            ASTBinaryOperatorKind::Plus => left + right,
-            ASTBinaryOperatorKind::Subtract => left - right,
-            ASTBinaryOperatorKind::Multiply => left * right,
-            ASTBinaryOperatorKind::Divide => left / right,
-            ASTBinaryOperatorKind::Power => left.powf(right),
-            ASTBinaryOperatorKind::Equals => {
+            BinaryOperatorKind::Plus => left + right,
+            BinaryOperatorKind::Subtract => left - right,
+            BinaryOperatorKind::Multiply => left * right,
+            BinaryOperatorKind::Divide => left / right,
+            BinaryOperatorKind::Power => left.powf(right),
+            BinaryOperatorKind::Equals => {
                 if left == right {
                     1_f64
                 } else {
                     0_f64
                 }
             }
-            ASTBinaryOperatorKind::NotEquals => self.eval_boolean_instruction(|| left != right),
-            ASTBinaryOperatorKind::LessThan => self.eval_boolean_instruction(|| left < right),
-            ASTBinaryOperatorKind::LessThanOrEqual => {
-                self.eval_boolean_instruction(|| left <= right)
-            }
-            ASTBinaryOperatorKind::GreaterThan => self.eval_boolean_instruction(|| left > right),
-            ASTBinaryOperatorKind::GreaterThanOrEqual => {
+            BinaryOperatorKind::NotEquals => self.eval_boolean_instruction(|| left != right),
+            BinaryOperatorKind::LessThan => self.eval_boolean_instruction(|| left < right),
+            BinaryOperatorKind::LessThanOrEqual => self.eval_boolean_instruction(|| left <= right),
+            BinaryOperatorKind::GreaterThan => self.eval_boolean_instruction(|| left > right),
+            BinaryOperatorKind::GreaterThanOrEqual => {
                 self.eval_boolean_instruction(|| left >= right)
             }
         });
@@ -198,30 +196,41 @@ impl<'a, 'de> ASTVisitor<'de> for ASTEvaluator<'a, 'de> {
 
     fn visit_parenthesized_expression(
         &mut self,
-        parenthesized_expression: &ASTParenthesizedExpression,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        parenthesized_expression: &ParenthesizedExpr,
+        _expr: &Expression<'de>,
     ) {
-        self.visit_expression(&parenthesized_expression.expression);
+        self.visit_expression(ast, &parenthesized_expression.expression);
     }
 
-    fn visit_block_statement(&mut self, block_statement: &ASTBlockStatement) {
+    fn visit_block_expression(
+        &mut self,
+        ast: &mut Ast<'de>,
+        block_expr: &BlockExpr,
+        _expr: &Expression<'de>,
+    ) {
         self.push_frame();
-        for statement in &block_statement.statements {
-            self.visit_statement(statement);
+        for statement in &block_expr.statements {
+            self.visit_statement(ast, *statement);
         }
         self.pop_frame();
     }
 
-    fn visit_if_statement(&mut self, if_statement: &ASTIfStatement<'de>) {
+    fn visit_if_expression(
+        &mut self,
+        ast: &mut Ast<'de>,
+        if_statement: &IfExpr<'de>,
+        _expr: &Expression<'de>,
+    ) {
         self.push_frame();
-        self.visit_expression(&if_statement.condition);
+        self.visit_expression(ast, &if_statement.condition);
         if self.last_value.unwrap() != 0 as f64 {
             self.push_frame();
-            self.visit_statement(&if_statement.then_branch);
+            self.visit_expression(ast, &if_statement.then_branch);
             self.pop_frame();
         } else if let Some(else_branch) = &if_statement.else_branch {
             self.push_frame();
-            self.visit_statement(&else_branch.else_statement);
+            self.visit_expression(ast, &else_branch.expr);
             self.pop_frame();
         }
         self.pop_frame();
@@ -229,22 +238,27 @@ impl<'a, 'de> ASTVisitor<'de> for ASTEvaluator<'a, 'de> {
 
     fn visit_assignment_expression(
         &mut self,
-        assignment_expression: &ASTAssignmentExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        assignment_expression: &AssignmentExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
-        let identifier = &assignment_expression.identifier.span.literal;
-        self.visit_expression(&assignment_expression.expression);
+        self.visit_expression(ast, &assignment_expression.expression);
         self.frames
-            .update(identifier.to_string(), self.last_value.unwrap());
+            .update(assignment_expression.variable_idx, self.last_value.unwrap());
     }
 
-    fn visit_func_decl_statement(&mut self, _func_decl_statement: &ASTFuncDeclStatement) {}
+    fn visit_function_declaration(
+        &mut self,
+        _ast: &mut Ast<'de>,
+        _func_decl: &FunctionDeclaration,
+    ) {
+    }
 
-    fn visit_break_statement(&mut self, _break_stmt: &ASTBreakStatement<'de>) {
+    fn visit_break_statement(&mut self, _ast: &mut Ast<'de>, _break_stmt: &BreakStmt<'de>) {
         self.should_break = true;
     }
 
-    fn visit_while_statement(&mut self, while_statement: &ASTWhileStatement<'de>) {
+    fn visit_while_statement(&mut self, ast: &mut Ast<'de>, while_statement: &WhileStmt<'de>) {
         let label = while_statement
             .label
             .as_ref()
@@ -254,11 +268,11 @@ impl<'a, 'de> ASTVisitor<'de> for ASTEvaluator<'a, 'de> {
             panic!("Duplicate loop label '{}'", label.unwrap());
         }
         self.push_frame();
-        self.visit_expression(&while_statement.condition);
+        self.visit_expression(ast, &while_statement.condition);
 
         while self.last_value.unwrap() != 0_f64 {
-            self.visit_statement(&while_statement.body);
-            self.visit_expression(&while_statement.condition);
+            self.visit_expression(ast, &while_statement.body);
+            self.visit_expression(ast, &while_statement.condition);
             if self.should_break {
                 self.should_break = false;
                 self.loops.pop();
@@ -271,43 +285,44 @@ impl<'a, 'de> ASTVisitor<'de> for ASTEvaluator<'a, 'de> {
 
     fn visit_call_expression(
         &mut self,
-        call_expression: &ASTCallExpression<'de>,
-        _expr: &ASTExpression<'de>,
+        ast: &mut Ast<'de>,
+        call_expression: &CallExpr<'de>,
+        _expr: &Expression<'de>,
     ) {
-        let function = self
+        let function_idx = self
             .global_scope
             .lookup_function(call_expression.identifier.span.literal)
-            .cloned()
             .unwrap_or_else(|| {
                 panic!(
                     "Function {} not found",
                     call_expression.identifier.span.literal
                 )
             });
+        let function = self.global_scope.functions.get(function_idx);
         let mut arguments = Vec::new();
         for argument in &call_expression.arguments {
-            self.visit_expression(argument);
+            self.visit_expression(ast, argument);
             arguments.push(self.last_value.unwrap());
         }
         self.push_frame();
         for (argument, param) in arguments.iter().zip(function.parameters.iter()) {
-            let parameter_name = param.name.clone();
-            self.frames.insert(parameter_name, *argument);
+            self.frames.insert(*param, *argument);
         }
 
-        self.visit_statement(&function.body);
+        self.visit_statement(ast, function.body);
         self.pop_frame();
     }
 
     fn visit_boolean_expression(
         &mut self,
-        boolean: &ASTBooleanExpression,
-        _expr: &ASTExpression<'de>,
+        _ast: &mut Ast<'de>,
+        boolean: &BooleanExpr,
+        _expr: &Expression<'de>,
     ) {
         self.last_value = Some(boolean.value as i64 as f64);
     }
 
-    fn visit_error(&mut self, _span: &TextSpan) {
+    fn visit_error(&mut self, _ast: &mut Ast<'de>, _span: &TextSpan) {
         panic!("Cannot evaluate error expression")
     }
 }

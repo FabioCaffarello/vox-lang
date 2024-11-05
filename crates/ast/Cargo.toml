@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 diagnostics = { path = "../diagnostics" }
+index = { path = "../index" }
 lexer = { path = "../lexer" }
 support = { path = "../support" }
 text = { path = "../text" }

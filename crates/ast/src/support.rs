@@ -23,36 +23,11 @@ pub fn expect_type<'de>(
     span: &TextSpan<'de>,
     expected: Type,
     actual: &Type,
-) {
+) -> Type {
     if !actual.is_assignable_to(&expected) {
         diagnostics
             .borrow_mut()
             .report_type_mismatch(span, &expected, actual);
     }
+    expected
 }
-
-// pub fn resolve_let_statement<'de>(
-//     ast: &Ast<'de>,
-//     diagnostics: &DiagnosticsBagCell<'de>,
-//     scopes: &mut Scopes,
-//     visitor: &mut dyn ASTVisitor<'de>,
-//     let_statement: &ASTLetStatement<'de>,
-// ) {
-//     let identifier = let_statement.identifier.span.literal;
-//     visitor.visit_expression(&let_statement.initializer);
-//     let initializer_expression = ast.query_expr(&let_statement.initializer);
-//     let ty = match &let_statement.type_annotation {
-//         Some(type_annotation) => {
-//             let ty = resolve_type_from_string(&diagnostics, &type_annotation.type_name);
-//             expect_type(
-//                 &diagnostics,
-//                 &initializer_expression.span(ast),
-//                 ty.clone(),
-//                 &initializer_expression.ty,
-//             );
-//             ty
-//         }
-//         None => initializer_expression.ty.clone(),
-//     };
-//     scopes.declare_variable(identifier, ty);
-// }

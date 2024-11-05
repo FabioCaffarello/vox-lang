@@ -9,15 +9,14 @@ pub mod visitor;
 mod loops;
 
 pub use ast::{
-    ASTAssignmentExpression, ASTBinaryExpression, ASTBinaryOperator, ASTBinaryOperatorKind,
-    ASTBlockStatement, ASTBreakStatement, ASTElseStatement, ASTExprID, ASTExpression,
-    ASTFuncDeclStatement, ASTFuncReturnType, ASTIfStatement, ASTLetStatement, ASTNumberExpression,
-    ASTReturnStatement, ASTStatement, ASTStatementKind, ASTStmtID, ASTUnaryOperator,
-    ASTUnaryOperatorKind, ASTVariableExpression, ASTWhileStatement, Ast, FuncDeclParameter,
-    StaticTypeAnnotation,
+    AssignmentExpr, Ast, BinaryExpr, BinaryOperator, BinaryOperatorAssociativity,
+    BinaryOperatorKind, BlockExpr, BreakStmt, ElseBranch, ExprID, Expression, FuncDeclParameter,
+    FuncReturnTypeSyntax, FunctionDeclaration, IfExpr, Item, ItemID, ItemKind, LetStmt, NumberExpr,
+    ReturnStmt, Statement, StaticTypeAnnotation, StmtID, StmtKind, UnaryOperator,
+    UnaryOperatorKind, VariableExpr, WhileStmt,
 };
-pub use evaluator::ASTEvaluator;
-pub use printer::ASTPrinter;
+pub use evaluator::Evaluator;
+pub use printer::Printer;
 pub use scopes::{GlobalScope, LocalScope, Resolver, Scopes};
 pub use validator::GlobalSymbolResolver;
-pub use visitor::ASTVisitor;
+pub use visitor::Visitor;
