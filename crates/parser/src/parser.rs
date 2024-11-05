@@ -1,9 +1,9 @@
 use crate::errors::ParserError;
-use ast::ast::{
+use ast::{ast::{
     Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch, ExprID,
     Expression, FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement,
     StaticTypeAnnotation, UnaryOperator, UnaryOperatorKind,
-};
+}, StmtID};
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
@@ -86,6 +86,14 @@ impl<'a, 'de> Parser<'a, 'de> {
         token
     }
 
+    fn consume_if(&mut self, kind: TokenKind) -> Option<Token<'de>> {
+        if self.current().kind == kind {
+            Some(self.consume())
+        } else {
+            None
+        }
+    }
+
     fn next_item(&mut self) -> Option<&Item<'de>> {
         if self.is_at_end() {
             return None;
@@ -101,14 +109,13 @@ impl<'a, 'de> Parser<'a, 'de> {
         match self.current().kind {
             TokenKind::Fun => self.parse_function_declaration(),
             _ => {
-                let stmt = self.parse_statement();
-                let stmt_id = stmt.id;
-                self.ast.item_from_kind(ItemKind::Stmt(stmt_id))
+                let id = self.parse_statement();
+                self.ast.item_from_kind(ItemKind::Stmt(id))
             }
         }
     }
 
-    fn parse_statement(&mut self) -> &Statement<'de> {
+    fn parse_statement(&mut self) -> StmtID {
         if self.current().kind == TokenKind::Identifier && self.peek(1).kind == TokenKind::Colon {
             let label = self.consume_and_check(TokenKind::Identifier);
             self.consume_and_check(TokenKind::Colon);
@@ -117,10 +124,10 @@ impl<'a, 'de> Parser<'a, 'de> {
         self.parse_statement_without_label()
     }
 
-    fn parse_labeled_statement(&mut self, label: Token<'de>) -> &Statement<'de> {
+    fn parse_labeled_statement(&mut self, label: Token<'de>) -> StmtID {
         match self.current().kind {
             TokenKind::While => {
-                let while_stmt = self.parse_while_statement(Some(label));
+                let while_stmt = self.parse_while_statement(Some(label)).id;
                 while_stmt
             }
             _ => {
@@ -132,14 +139,16 @@ impl<'a, 'de> Parser<'a, 'de> {
         }
     }
 
-    fn parse_statement_without_label(&mut self) -> &Statement<'de> {
-        match self.current().kind {
-            TokenKind::Let => self.parse_let_statement(),
-            TokenKind::While => self.parse_while_statement(None),
-            TokenKind::Return => self.parse_return_statement(),
-            TokenKind::Break => self.parse_break_statement(),
-            _ => self.parse_expression_statement(),
-        }
+    fn parse_statement_without_label(&mut self) -> StmtID {
+        let stmt = match self.current().kind {
+            TokenKind::Let => self.parse_let_statement().id,
+            TokenKind::While => self.parse_while_statement(None).id,
+            TokenKind::Return => self.parse_return_statement().id,
+            TokenKind::Break => self.parse_break_statement().id,
+            _ => self.parse_expression_statement().id,
+        };
+        self.consume_if(TokenKind::SemiColon);
+        stmt
     }
 
     fn parse_let_statement(&mut self) -> &Statement<'de> {
@@ -286,7 +295,7 @@ impl<'a, 'de> Parser<'a, 'de> {
     fn parse_block_expression(&mut self, left_brace: Token<'de>) -> &Expression<'de> {
         let mut statements = Vec::new();
         while self.current().kind != TokenKind::RBrace && !self.is_at_end() {
-            statements.push(self.parse_statement().id);
+            statements.push(self.parse_statement());
         }
         let right_brace = self.consume_and_check(TokenKind::RBrace);
         self.ast
@@ -315,7 +324,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         let identifier = self.consume_and_check(TokenKind::Identifier);
         let parameters = self.parse_optional_parameter_list();
         let return_type = self.parse_optional_return_type_annotation();
-        let body = self.parse_statement().id;
+        let body = self.parse_statement();
         self.ast
             .function_declaration(identifier, parameters, body, return_type)
     }
