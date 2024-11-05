@@ -170,9 +170,7 @@ fn should_not_report_any_errors_when_shadowing_variable() {
     }
     ";
     let expected = vec![];
-
-    let verifier = DiagnosticsVerifier::new(input, raw, expected);
-    verifier.verify();
+    assert_diagnostics(input, raw, expected);
 }
 
 #[test]
@@ -189,24 +187,54 @@ fn should_report_function_already_declared() {
 
     let expected = vec!["Function 'a' already declared"];
 
-    let verifier = DiagnosticsVerifier::new(input, raw, expected);
-    verifier.verify();
+    assert_diagnostics(input, raw, expected);
 }
 
 #[test]
 pub fn should_report_error_when_function_is_called_with_wrong_number_of_arguments() {
     let raw = "\
-    func a(a, b) {}
+    func a(a: float, b: float) {}
     a(1)
     ";
 
     let input = "\
-    func a(a, b) {}
+    func a(a: float, b: float) {}
     «a»(1)
     ";
 
     let expected = vec!["Function 'a' expects 2 arguments, but was given 1"];
 
-    let verifier = DiagnosticsVerifier::new(input, raw, expected);
-    verifier.verify();
+    assert_diagnostics(input, raw, expected);
 }
+
+// #[test]
+// pub fn should_report_type_mismatch_when_float_is_used_in_if_condition() {
+//     let raw = "\
+//     if 1 {}
+//     ";
+
+//     let input = "\
+//     «if 1 {}»
+//     ";
+
+//     let expected = vec!["Type mismatch: expected 'bool', found 'float'"];
+
+//     assert_diagnostics(input, raw, expected);
+// }
+
+// #[test]
+// pub fn should_report_type_mismatch_when_variable_of_type_float_is_used_in_if_condition() {
+//     let raw = "\
+//     let a = 1
+//     if a {}
+//     ";
+
+//     let input = "\
+//     let a = 1
+//     «if a {}»
+//     ";
+
+//     let expected = vec!["Type mismatch: expected 'bool', found 'float'"];
+
+//     assert_diagnostics(input, raw, expected);
+// }

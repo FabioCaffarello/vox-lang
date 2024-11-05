@@ -5,8 +5,11 @@ members = [
     "crates/compiler",
     "crates/diagnostics",
     "crates/lexer",
+    "crates/index",
     "crates/parser",
+    "crates/support",
     "crates/text",
+    "crates/typings",
     ".",
 ]
 
@@ -29,7 +32,7 @@ text = { path = "crates/text" }
 miette = { version = "7.2.0", features = ["fancy"] }
 bytes = "1.3.0"
 clap = { version = "4.5.16", features = ["derive"] }
-thiserror = "1.0.63"
+thiserror = "1.0.66"
 termion = "4.0.3"
 
 [dev-dependencies]

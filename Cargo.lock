@@ -71,9 +71,12 @@ name = "ast"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "index",
  "lexer",
+ "support",
  "termion",
  "text",
+ "typings",
 ]
 
 [[package]]
@@ -188,6 +191,7 @@ dependencies = [
  "lexer",
  "termion",
  "text",
+ "typings",
 ]
 
 [[package]]
@@ -211,6 +215,10 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "index"
+version = "0.1.0"
 
 [[package]]
 name = "is_ci"
@@ -331,6 +339,7 @@ dependencies = [
  "diagnostics",
  "lexer",
  "miette",
+ "support",
  "thiserror",
 ]
 
@@ -399,6 +408,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
+name = "support"
+version = "0.1.0"
+
+[[package]]
 name = "supports-color"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -421,9 +434,9 @@ checksum = "b7401a30af6cb5818bb64852270bb722533397edcfc7344954a38f420819ece2"
 
 [[package]]
 name = "syn"
-version = "2.0.85"
+version = "2.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5023162dfcd14ef8f32034d8bcd4cc5ddc61ef7a247c024a33e24e1f24d21b56"
+checksum = "25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -469,23 +482,27 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.65"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d11abd9594d9b38965ef50805c5e469ca9cc6f197f883f717e0269a3057b3d5"
+checksum = "3b3c6efbfc763e64eb85c11c25320f0737cb7364c4b6336db90aa9ebe27a0bbd"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.65"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae71770322cbd277e69d762a16c444af02aa0575ac0d174f0b9562d3b37f8602"
+checksum = "b607164372e89797d78b8e23a6d67d5d1038c1c65efd52e1389ef8b77caba2a6"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "typings"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"

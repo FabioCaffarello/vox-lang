@@ -2,10 +2,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use ast::{
     ast::Ast,
-    evaluator::ASTEvaluator,
+    evaluator::Evaluator,
     scopes::{GlobalScope, Resolver, Scopes},
     validator::GlobalSymbolResolver,
-    ASTVisitor,
+    Visitor,
 };
 use diagnostics::{
     diagnostics::{DiagnosticsBag, DiagnosticsBagCell},
@@ -18,7 +18,7 @@ use text::source::SourceText;
 pub struct CompilationUnit<'de> {
     pub ast: Ast<'de>,
     pub diagnostics_bag: DiagnosticsBagCell<'de>,
-    pub global_scope: GlobalScope<'de>,
+    pub global_scope: GlobalScope,
 }
 
 impl<'de> CompilationUnit<'de> {
@@ -27,14 +27,11 @@ impl<'de> CompilationUnit<'de> {
         let diagnostics_bag: DiagnosticsBagCell = Rc::new(RefCell::new(DiagnosticsBag::new()));
         let diagnostics_rc = Rc::clone(&diagnostics_bag);
 
-        let mut parser = Parser::from_input(input, diagnostics_rc.clone())
+        let mut ast = Ast::new();
+        let mut parser = Parser::from_input(input, diagnostics_rc.clone(), &mut ast)
             .map_err(|_| diagnostics_bag.borrow().clone())?;
 
-        let mut ast = Ast::new();
-        while let Some(statement) = parser.next_statement() {
-            ast.add_statement(statement);
-        }
-
+        parser.parse();
         ast.visualize();
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
@@ -44,15 +41,15 @@ impl<'de> CompilationUnit<'de> {
         let global_scope = global_symbol_resolver.global_scope;
         let scopes = Scopes::from_global_scope(global_scope);
         let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes);
-        ast.visit(&mut resolver);
+        resolver.resolve(&mut ast);
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
 
         Ok(CompilationUnit {
+            global_scope: resolver.scopes.global_scope,
             ast,
             diagnostics_bag,
-            global_scope: resolver.scopes.global_scope,
         })
     }
 
@@ -70,12 +67,13 @@ impl<'de> CompilationUnit<'de> {
         }
     }
 
-    pub fn run(&self) {
-        let mut eval = ASTEvaluator::new(&self.global_scope);
+    pub fn run(&mut self) {
+        let mut eval = Evaluator::new(&self.global_scope);
         let main_function = self.global_scope.lookup_function("main");
 
         if let Some(function) = main_function {
-            eval.visit_statement(&function.body);
+            let function = self.global_scope.functions.get(function);
+            eval.visit_statement(&mut self.ast, function.body);
         } else {
             self.ast.visit(&mut eval);
         }
