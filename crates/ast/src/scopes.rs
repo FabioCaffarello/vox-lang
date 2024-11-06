@@ -73,6 +73,10 @@ impl GlobalScope {
         };
         self.functions.push(function)
     }
+
+    // pub fn set_variable_type(&mut self, variable: VariableIdx, ty: Type) {
+    //     self.variables[variable].ty = ty;
+    // }
 }
 
 #[derive(Debug)]
@@ -180,12 +184,11 @@ impl Scopes {
     }
 
     fn surrounding_function(&self) -> Option<&Function> {
-        return self
-            .local_scopes
+        self.local_scopes
             .iter()
-            .filter_map(|scope| scope.function)
+            .filter_map(|scope| scope.function.as_ref())
             .last()
-            .map(|function_idx| self.global_scope.functions.get(function_idx));
+            .map(|function_idx| self.global_scope.functions.get(*function_idx))
     }
 
     fn current_local_scope_mut(&mut self) -> &mut LocalScope {
@@ -198,6 +201,7 @@ pub struct Resolver<'de> {
     pub scopes: Scopes,
     diagnostics: DiagnosticsBagCell<'de>,
     loops: Loops,
+    enclosing_variable_declarations: Vec<String>,
 }
 
 impl<'de> Resolver<'de> {
@@ -206,6 +210,7 @@ impl<'de> Resolver<'de> {
             scopes,
             diagnostics,
             loops: Loops::new(),
+            enclosing_variable_declarations: Vec::new(),
         }
     }
 
@@ -414,7 +419,7 @@ impl<'de> Visitor<'de> for Resolver<'de> {
         } else {
             initializer_expression.ty.clone()
         };
-        let variable = self.scopes.declare_variable(identifier, ty);
+        let variable = self.scopes.declare_variable(identifier, Type::Unresolved);
         ast.set_variable_for_stmt(stmt.id, variable);
     }
 
@@ -480,14 +485,14 @@ impl<'de> Visitor<'de> for Resolver<'de> {
             .scopes
             .lookup_variable(variable_expression.identifier.span.literal)
         {
+            None => {
+                let mut diagnostics_binding = self.diagnostics.borrow_mut();
+                diagnostics_binding.report_undeclared_variable(&variable_expression.identifier);
+            }
             Some(variable_idx) => {
                 let variable = self.scopes.global_scope.variables.get(variable_idx);
                 ast.set_type(expr.id, variable.ty.clone());
                 ast.set_variable(expr.id, variable_idx);
-            }
-            None => {
-                let mut diagnostics_binding = self.diagnostics.borrow_mut();
-                diagnostics_binding.report_undeclared_variable(&variable_expression.identifier);
             }
         }
     }
