@@ -78,25 +78,32 @@ impl<'de> DiagnosticsBag<'de> {
         self.diagnostics.push(diagnostic);
     }
 
-    pub fn report_undeclared_function(&mut self, token: &Token<'de>) {
+    pub fn report_cannot_call_no_callable_expression(
+        &mut self,
+        callee_span: &TextSpan<'de>,
+        callee_type: &Type,
+    ) {
         self.report_error(
-            format!("Undeclared function '{}'", token.span.literal),
-            token.span,
+            format!(
+                "Cannot call non-callable expression of type '{}'",
+                callee_type
+            ),
+            *callee_span,
         );
     }
 
     pub fn report_invalid_argument_count(
         &mut self,
-        token: &Token<'de>,
+        callee_span: &TextSpan<'de>,
         expected: usize,
         actual: usize,
     ) {
         self.report_error(
             format!(
                 "Function '{}' expects {} arguments, but was given {}",
-                token.span.literal, expected, actual
+                callee_span.literal, expected, actual
             ),
-            token.span,
+            *callee_span,
         );
     }
 
@@ -148,7 +155,7 @@ impl<'de> DiagnosticsBag<'de> {
 
     pub fn report_cannot_return_outside_function(&mut self, token: &Token<'de>) {
         self.report_error(
-            "Return statement outside of function".to_string(),
+            "Cannot use 'return' outside of function".to_string(),
             token.span,
         );
     }

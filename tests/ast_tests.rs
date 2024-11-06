@@ -195,7 +195,7 @@ impl<'de> Visitor<'de> for ASTVerifier<'de> {
         func_decl: &FunctionDeclaration<'de>,
     ) {
         self.actual.push(TestASTNode::Func);
-        self.visit_statement(ast, func_decl.body);
+        self.visit_expression(ast, func_decl.body);
     }
 
     fn visit_return_statement(&mut self, ast: &mut Ast<'de>, return_statement: &ReturnStmt<'de>) {

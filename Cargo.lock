@@ -182,6 +182,7 @@ dependencies = [
  "lexer",
  "parser",
  "text",
+ "typings",
 ]
 
 [[package]]
@@ -341,6 +342,7 @@ dependencies = [
  "miette",
  "support",
  "thiserror",
+ "typings",
 ]
 
 [[package]]
@@ -503,6 +505,9 @@ dependencies = [
 [[package]]
 name = "typings"
 version = "0.1.0"
+dependencies = [
+ "index",
+]
 
 [[package]]
 name = "unicode-ident"

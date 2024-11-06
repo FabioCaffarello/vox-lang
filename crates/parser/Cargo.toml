@@ -8,5 +8,6 @@ ast = { path = "../ast" }
 diagnostics = { path = "../diagnostics" }
 lexer = { path = "../lexer" }
 support = { path = "../support" }
+typings = { path = "../typings" }
 miette = { version = "7.2.0", features = ["fancy"] }
 thiserror = "1.0.63"

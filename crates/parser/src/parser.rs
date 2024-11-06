@@ -1,16 +1,14 @@
 use crate::errors::ParserError;
-use ast::{
-    ast::{
-        Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch, ExprID,
-        Expression, FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement,
-        StaticTypeAnnotation, UnaryOperator, UnaryOperatorKind,
-    },
-    StmtID,
+use ast::ast::{
+    Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch,
+    FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement, StaticTypeAnnotation,
+    UnaryOperator, UnaryOperatorKind,
 };
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
 use support::counter::Counter;
+use typings::types::{ExprID, StmtID};
 
 pub struct Parser<'a, 'de> {
     ast: &'a mut Ast<'de>,
@@ -97,7 +95,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         }
     }
 
-    fn next_item(&mut self) -> Option<&Item<'de>> {
+    fn next_item(&mut self) -> Option<&Item> {
         if self.is_at_end() {
             return None;
         }
@@ -108,14 +106,9 @@ impl<'a, 'de> Parser<'a, 'de> {
         self.current().kind == TokenKind::EOF
     }
 
-    fn parse_item(&mut self) -> &Item<'de> {
-        match self.current().kind {
-            TokenKind::Fun => self.parse_function_declaration(),
-            _ => {
-                let id = self.parse_statement();
-                self.ast.item_from_kind(ItemKind::Stmt(id))
-            }
-        }
+    fn parse_item(&mut self) -> &Item {
+        let id = self.parse_statement();
+        self.ast.item_from_kind(ItemKind::Stmt(id))
     }
 
     fn parse_statement(&mut self) -> StmtID {
@@ -159,47 +152,43 @@ impl<'a, 'de> Parser<'a, 'de> {
         let identifier = self.consume_and_check(TokenKind::Identifier);
         let optional_type_annotation = self.parse_optional_type_annotation();
         self.consume_and_check(TokenKind::Equal);
-        let expr = self.parse_expression().id;
+        let expr = self.parse_expression();
         self.ast
             .let_statement(identifier, expr, optional_type_annotation)
     }
 
     fn parse_expression_statement(&mut self) -> &Statement<'de> {
-        let expr = self.parse_expression().id;
+        let expr = self.parse_expression();
         self.ast.expression_statement(expr)
     }
 
-    fn parse_expression(&mut self) -> &Expression<'de> {
+    fn parse_expression(&mut self) -> ExprID {
         self.parse_assignment_expression()
     }
 
-    fn parse_assignment_expression(&mut self) -> &Expression<'de> {
+    fn parse_assignment_expression(&mut self) -> ExprID {
         if self.current().kind == TokenKind::Identifier && self.peek(1).kind == TokenKind::Equal {
             let identifier = self.consume_and_check(TokenKind::Identifier);
             let equals = self.consume_and_check(TokenKind::Equal);
-            let expr = self.parse_expression().id;
-            return self.ast.assignment_expression(identifier, equals, expr);
+            let expr = self.parse_expression();
+            return self.ast.assignment_expression(identifier, equals, expr).id;
         }
-        return self.parse_binary_expression(0);
+        self.parse_binary_expression(0)
     }
 
-    fn parse_binary_expression(&mut self, precedence: u8) -> &Expression<'de> {
-        let left = self.parse_unary_expression().id;
+    fn parse_binary_expression(&mut self, precedence: u8) -> ExprID {
+        let left = self.parse_unary_expression();
         self.parse_binary_expression_recurse(left, precedence)
     }
 
-    fn parse_binary_expression_recurse(
-        &mut self,
-        mut left: ExprID,
-        precedence: u8,
-    ) -> &Expression<'de> {
+    fn parse_binary_expression_recurse(&mut self, mut left: ExprID, precedence: u8) -> ExprID {
         while let Some(operator) = self.parse_binary_operator() {
             let operator_precedence = operator.precedence();
             if operator_precedence < precedence {
                 break;
             }
             self.consume();
-            let mut right = self.parse_unary_expression().id;
+            let mut right = self.parse_unary_expression();
 
             while let Some(inner_operator) = self.parse_binary_operator() {
                 let greater_precedence = inner_operator.precedence() > operator.precedence();
@@ -211,58 +200,57 @@ impl<'a, 'de> Parser<'a, 'de> {
                     break;
                 }
 
-                right = self
-                    .parse_binary_expression_recurse(
-                        right,
-                        std::cmp::max(operator.precedence(), inner_operator.precedence()),
-                    )
-                    .id;
+                right = self.parse_binary_expression_recurse(
+                    right,
+                    std::cmp::max(operator.precedence(), inner_operator.precedence()),
+                );
             }
             left = self.ast.binary_expression(left, operator, right).id;
         }
-        self.ast.query_expr(left)
+        left
     }
 
-    fn parse_unary_expression(&mut self) -> &Expression<'de> {
+    fn parse_unary_expression(&mut self) -> ExprID {
         if let Some(operator) = self.parse_unary_operator() {
             self.consume();
-            let operand = self.parse_primary_expression().id;
-            return self.ast.unary_expression(operator, operand);
+            let operand = self.parse_primary_expression();
+            return self.ast.unary_expression(operator, operand).id;
         }
-        return self.parse_primary_expression();
+        self.parse_primary_expression()
     }
 
-    fn parse_primary_expression(&mut self) -> &Expression<'de> {
+    fn parse_primary_expression(&mut self) -> ExprID {
         let token = self.consume();
-        match token.kind {
+        let expr = match token.kind {
+            TokenKind::Fun => self.parse_func_expression(token),
             TokenKind::LBrace => self.parse_block_expression(token),
             TokenKind::If => self.parse_if_expression(token),
-            TokenKind::Number(number) => self.ast.number_literal_expression(number, token),
+            TokenKind::Number(number) => self.ast.number_literal_expression(number, token).id,
             TokenKind::LParen => {
-                let expr = self.parse_expression().id;
+                let expr = self.parse_expression();
                 let left_paren = token;
                 let right_paren = self.consume_and_check(TokenKind::RParen);
                 self.ast
                     .parenthesized_expression(left_paren, expr, right_paren)
+                    .id
             }
-            TokenKind::Identifier => {
-                if self.current().kind == TokenKind::LParen {
-                    self.parse_call_expression(token)
-                } else {
-                    self.ast.identifier_expression(token)
-                }
-            }
+            TokenKind::Identifier => self.ast.identifier_expression(token).id,
             TokenKind::True | TokenKind::False => {
                 let value = token.kind == TokenKind::True;
-                self.ast.boolean_expression(token, value)
+                self.ast.boolean_expression(token, value).id
             }
             _ => {
                 self.diagnostics_bag
                     .borrow_mut()
                     .report_expected_expression(&token);
-                self.ast.error_expression(token.span)
+                self.ast.error_expression(token.span).id
             }
-        }
+        };
+
+        return match &self.current().kind {
+            TokenKind::LParen => self.parse_call_expression(expr),
+            _ => expr,
+        };
     }
 
     fn parse_unary_operator(&mut self) -> Option<UnaryOperator<'de>> {
@@ -295,7 +283,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         return kind.map(|kind| BinaryOperator::new(kind, token));
     }
 
-    fn parse_block_expression(&mut self, left_brace: Token<'de>) -> &Expression<'de> {
+    fn parse_block_expression(&mut self, left_brace: Token<'de>) -> ExprID {
         let mut statements = Vec::new();
         while self.current().kind != TokenKind::RBrace && !self.is_at_end() {
             statements.push(self.parse_statement());
@@ -303,33 +291,34 @@ impl<'a, 'de> Parser<'a, 'de> {
         let right_brace = self.consume_and_check(TokenKind::RBrace);
         self.ast
             .block_expression(left_brace, statements, right_brace)
+            .id
     }
 
-    fn parse_if_expression(&mut self, if_keyword: Token<'de>) -> &Expression<'de> {
-        let condition_expr = self.parse_expression().id;
-        let then = self.parse_expression().id;
+    fn parse_if_expression(&mut self, if_keyword: Token<'de>) -> ExprID {
+        let condition_expr = self.parse_expression();
+        let then = self.parse_expression();
         let else_statement = self.parse_optional_else_statement();
         self.ast
             .if_expression(if_keyword, condition_expr, then, else_statement)
+            .id
     }
 
     fn parse_optional_else_statement(&mut self) -> Option<ElseBranch<'de>> {
         if self.current().kind == TokenKind::Else {
             let else_keyword = self.consume_and_check(TokenKind::Else);
-            let else_expr = self.parse_expression().id;
+            let else_expr = self.parse_expression();
             return Some(ElseBranch::new(else_keyword, else_expr));
         }
         None
     }
 
-    fn parse_function_declaration(&mut self) -> &Item<'de> {
-        self.consume_and_check(TokenKind::Fun);
-        let identifier = self.consume_and_check(TokenKind::Identifier);
+    fn parse_func_expression(&mut self, func_keyword: Token<'de>) -> ExprID {
         let parameters = self.parse_optional_parameter_list();
         let return_type = self.parse_optional_return_type_annotation();
-        let body = self.parse_statement();
+        let body = self.parse_expression();
         self.ast
-            .function_declaration(identifier, parameters, body, return_type)
+            .func_expression(func_keyword, parameters, body, return_type)
+            .id
     }
 
     fn parse_optional_parameter_list(&mut self) -> Vec<FuncDeclParameter<'de>> {
@@ -354,14 +343,14 @@ impl<'a, 'de> Parser<'a, 'de> {
     fn parse_return_statement(&mut self) -> &Statement<'de> {
         let return_keyword = self.consume_and_check(TokenKind::Return);
         // TODO: allow empty return statements
-        let expression = self.parse_expression().id;
+        let expression = self.parse_expression();
         self.ast.return_statement(return_keyword, Some(expression))
     }
 
     fn parse_while_statement(&mut self, label: Option<Token<'de>>) -> &Statement<'de> {
         let while_keyword = self.consume_and_check(TokenKind::While);
-        let condition_expr = self.parse_expression().id;
-        let body = self.parse_expression().id;
+        let condition_expr = self.parse_expression();
+        let body = self.parse_expression();
         self.ast
             .while_statement(label, while_keyword, condition_expr, body)
     }
@@ -376,18 +365,19 @@ impl<'a, 'de> Parser<'a, 'de> {
         self.ast.break_statement(break_keyword, label)
     }
 
-    fn parse_call_expression(&mut self, identifier: Token<'de>) -> &Expression<'de> {
+    fn parse_call_expression(&mut self, callee: ExprID) -> ExprID {
         let left_paren = self.consume_and_check(TokenKind::LParen);
         let mut arguments = Vec::new();
         while self.current().kind != TokenKind::RParen && !self.is_at_end() {
-            arguments.push(self.parse_expression().id);
+            arguments.push(self.parse_expression());
             if self.current().kind != TokenKind::RParen {
                 self.consume_and_check(TokenKind::Comma);
             }
         }
         let right_paren = self.consume_and_check(TokenKind::RParen);
         self.ast
-            .call_expression(identifier, left_paren, right_paren, arguments)
+            .call_expression(callee, left_paren, right_paren, arguments)
+            .id
     }
 
     fn parse_optional_type_annotation(&mut self) -> Option<StaticTypeAnnotation<'de>> {

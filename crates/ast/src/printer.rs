@@ -1,12 +1,13 @@
 use crate::ast::{
     AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, BreakStmt, CallExpr, Expression,
-    FunctionDeclaration, LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, Statement, StmtID,
-    UnaryExpr, VariableExpr, WhileStmt,
+    FuncExpr, LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, Statement, UnaryExpr,
+    VariableExpr, WhileStmt,
 };
 use crate::visitor::Visitor;
 use crate::{FuncReturnTypeSyntax, IfExpr, StaticTypeAnnotation};
 use termion::color::{self, Fg, Reset};
 use text::span::TextSpan;
+use typings::types::{ExprID, StmtID};
 
 pub struct Printer {
     indent: usize,
@@ -230,21 +231,22 @@ impl<'de> Visitor<'de> for Printer {
         self.add_newline();
     }
 
-    fn visit_function_declaration(
+    fn visit_func_expression(
         &mut self,
         ast: &mut Ast<'de>,
-        func_decl: &FunctionDeclaration<'de>,
+        func_expr: &FuncExpr<'de>,
+        _expr_id: ExprID,
     ) {
         self.add_keyword("func");
         self.add_whitespace();
-        self.add_text(func_decl.identifier.span.literal);
-        let are_parameters_empty = func_decl.parameters.is_empty();
+        let decl = &func_expr.decl;
+        let are_parameters_empty = decl.parameters.is_empty();
         if !are_parameters_empty {
             self.add_text("(");
         } else {
             self.add_whitespace();
         }
-        for (i, parameter) in func_decl.parameters.iter().enumerate() {
+        for (i, parameter) in decl.parameters.iter().enumerate() {
             if i != 0 {
                 self.add_text(",");
                 self.add_whitespace();
@@ -255,11 +257,11 @@ impl<'de> Visitor<'de> for Printer {
         if !are_parameters_empty {
             self.add_text(")");
             self.add_whitespace();
-            if let Some(return_type) = &func_decl.return_type {
+            if let Some(return_type) = &decl.return_type {
                 self.add_return_type(return_type);
             }
         }
-        self.visit_statement(ast, func_decl.body);
+        self.visit_expression(ast, &decl.body);
         self.add_newline();
     }
 
@@ -295,7 +297,7 @@ impl<'de> Visitor<'de> for Printer {
         call_expression: &CallExpr,
         _expr: &Expression<'de>,
     ) {
-        self.add_text(call_expression.identifier.span.literal);
+        self.visit_expression(ast, &call_expression.callee);
         self.add_text("(");
         for (i, argument) in call_expression.arguments.iter().enumerate() {
             if i != 0 {

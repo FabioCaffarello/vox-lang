@@ -1,11 +1,19 @@
+use index::{idx, Idx};
 use std::fmt::{Display, Formatter, Result};
+
+idx!(FunctionIdx);
+idx!(VariableIdx);
+idx!(StmtID);
+idx!(ExprID);
+idx!(ItemID);
 
 #[derive(Debug, Clone)]
 pub enum Type {
     Float,
     Bool,
-    Unresolved,
+    Function(FunctionIdx),
     Void,
+    Unresolved,
     Error,
 }
 
@@ -14,6 +22,7 @@ impl Display for Type {
         let type_name = match self {
             Self::Float => "float",
             Self::Bool => "bool",
+            Self::Function(_) => "function",
             Self::Unresolved => "unresolved",
             Self::Void => "void",
             Self::Error => "?",
@@ -25,13 +34,6 @@ impl Display for Type {
 
 impl Type {
     pub fn is_assignable_to(&self, other: &Type) -> bool {
-        // match (self, other) {
-        //     (Type::Float, Type::Float) => true,
-        //     (Type::Bool, Type::Bool) => true,
-        //     (Type::Error, _) => true,
-        //     (_, Type::Error) => true,
-        //     _ => false,
-        // }
         matches!(
             (self, other),
             (Type::Float, Type::Float)

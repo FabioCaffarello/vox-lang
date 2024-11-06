@@ -4,7 +4,6 @@ use ast::{
     ast::Ast,
     evaluator::Evaluator,
     scopes::{GlobalScope, Resolver, Scopes},
-    validator::GlobalSymbolResolver,
     Visitor,
 };
 use diagnostics::{
@@ -13,6 +12,7 @@ use diagnostics::{
 };
 use parser::Parser;
 use text::source::SourceText;
+use typings::types::Type;
 
 #[derive(Debug)]
 pub struct CompilationUnit<'de> {
@@ -36,9 +36,7 @@ impl<'de> CompilationUnit<'de> {
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
-        let mut global_symbol_resolver = GlobalSymbolResolver::new(Rc::clone(&diagnostics_bag));
-        ast.visit(&mut global_symbol_resolver);
-        let global_scope = global_symbol_resolver.global_scope;
+        let global_scope = GlobalScope::new();
         let scopes = Scopes::from_global_scope(global_scope);
         let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes);
         resolver.resolve(&mut ast);
@@ -69,11 +67,15 @@ impl<'de> CompilationUnit<'de> {
 
     pub fn run(&mut self) {
         let mut eval = Evaluator::new(&self.global_scope);
-        let main_function = self.global_scope.lookup_function("main");
-
-        if let Some(function) = main_function {
-            let function = self.global_scope.functions.get(function);
-            eval.visit_statement(&mut self.ast, function.body);
+        let main_function_ref = self.global_scope.lookup_global_variable("main");
+        if let Some(function) = main_function_ref {
+            let function = self.global_scope.variables.get(function);
+            let function = match &function.ty {
+                Type::Function(function) => function,
+                _ => panic!("Expected function type"),
+            };
+            let function = self.global_scope.functions.get(*function);
+            eval.visit_expression(&mut self.ast, &function.body);
         } else {
             self.ast.visit(&mut eval);
         }
