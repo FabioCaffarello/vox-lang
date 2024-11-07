@@ -1,18 +1,16 @@
-use std::collections::HashMap;
-
-use crate::ast::FuncExpr;
 use crate::scopes::GlobalScope;
 use crate::visitor::Visitor;
 use crate::{
     ast::{
         AssignmentExpr, Ast, BinaryExpr, BinaryOperatorKind, BlockExpr, BooleanExpr, BreakStmt,
-        CallExpr, Expression, IfExpr, LetStmt, NumberExpr, ParenthesizedExpr, Statement, UnaryExpr,
-        UnaryOperatorKind, VariableExpr, WhileStmt,
+        CallExpr, Expression, FunctionDeclaration, IfExpr, LetStmt, NumberExpr, ParenthesizedExpr,
+        Statement, UnaryExpr, UnaryOperatorKind, VariableExpr, WhileStmt,
     },
     loops::Loops,
 };
+use std::collections::HashMap;
 use text::span::TextSpan;
-use typings::types::{ExprID, FunctionIdx, Type, VariableIdx};
+use typings::types::{FunctionIdx, ItemID, VariableIdx};
 
 #[derive(Debug)]
 pub struct Frame {
@@ -56,7 +54,7 @@ impl Frames {
 
     fn update(&mut self, idx: VariableIdx, value: Value) {
         for frame in self.frames.iter_mut().rev() {
-            if frame.variables.contains_key(&idx) {
+            if frame.get(&idx).is_some() {
                 frame.insert(idx, value);
                 return;
             }
@@ -166,7 +164,9 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
             *self
                 .frames
                 .get(&variable_expression.variable_idx)
-                .unwrap_or_else(|| panic!("Variable {} not found", identifier)),
+                .unwrap_or_else(|| {
+                    panic!("Variable '{}' not found", identifier);
+                }),
         );
     }
 
@@ -286,11 +286,11 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
             .update(assignment_expression.variable_idx, self.last_value.unwrap());
     }
 
-    fn visit_func_expression(
+    fn visit_function_declaration(
         &mut self,
         _ast: &mut Ast<'de>,
-        _func_expr: &FuncExpr,
-        _expr_id: ExprID,
+        _func_decl: &FunctionDeclaration<'de>,
+        _item_id: ItemID,
     ) {
     }
 
@@ -309,7 +309,6 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         }
         self.push_frame();
         self.visit_expression(ast, &while_statement.condition);
-
         while self.expect_last_value().expect_boolean() {
             self.visit_expression(ast, &while_statement.body);
             if self.should_break {
@@ -329,12 +328,12 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         call_expression: &CallExpr<'de>,
         _expr: &Expression<'de>,
     ) {
-        let callee = ast.query_expr(call_expression.callee).clone();
-        let function_idx = match &callee.ty {
-            Type::Function(function_idx) => *function_idx,
-            _ => panic!("Expected function type"),
-        };
-        let function = self.global_scope.functions.get(function_idx);
+        let function_name = call_expression.function_name();
+        let function = self
+            .global_scope
+            .lookup_function(function_name)
+            .map(|f| self.global_scope.functions.get(f))
+            .unwrap_or_else(|| panic!("Function '{}' not found", function_name));
         let mut arguments = Vec::new();
         for argument in &call_expression.arguments {
             self.visit_expression(ast, argument);

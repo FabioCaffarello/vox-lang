@@ -1,11 +1,14 @@
-use ast::ast::{
-    AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, CallExpr, FunctionDeclaration, IfExpr,
-    LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, UnaryExpr, VariableExpr, WhileStmt,
+use ast::{
+    ast::{
+        AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, CallExpr, Expression,
+        FunctionDeclaration, IfExpr, LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, Statement,
+        UnaryExpr, VariableExpr, WhileStmt,
+    },
+    visitor::Visitor,
 };
-use ast::visitor::Visitor;
-use ast::{Expression, Statement};
 use compiler::compilation_unit::CompilationUnit;
 use text::span::TextSpan;
+use typings::types::ItemID;
 
 #[derive(Debug, PartialEq)]
 enum TestASTNode {
@@ -193,9 +196,10 @@ impl<'de> Visitor<'de> for ASTVerifier<'de> {
         &mut self,
         ast: &mut Ast<'de>,
         func_decl: &FunctionDeclaration<'de>,
+        _item_id: ItemID,
     ) {
         self.actual.push(TestASTNode::Func);
-        self.visit_expression(ast, func_decl.body);
+        self.visit_expression(ast, &func_decl.body);
     }
 
     fn visit_return_statement(&mut self, ast: &mut Ast<'de>, return_statement: &ReturnStmt<'de>) {

@@ -1,7 +1,7 @@
 use crate::ast::{
     AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, BreakStmt, CallExpr, ExprKind,
-    Expression, FuncExpr, IfExpr, ItemKind, LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt,
-    Statement, StmtKind, UnaryExpr, VariableExpr, WhileStmt,
+    Expression, FunctionDeclaration, IfExpr, ItemKind, LetStmt, NumberExpr, ParenthesizedExpr,
+    ReturnStmt, Statement, StmtKind, UnaryExpr, VariableExpr, WhileStmt,
 };
 use text::span::TextSpan;
 use typings::types::{ExprID, ItemID, StmtID};
@@ -16,6 +16,9 @@ pub trait Visitor<'de> {
         match &item.kind {
             ItemKind::Stmt(stmt) => {
                 self.visit_statement(ast, *stmt);
+            }
+            ItemKind::Function(func_decl) => {
+                self.visit_function_declaration(ast, func_decl, item.id);
             }
         }
     }
@@ -55,12 +58,13 @@ pub trait Visitor<'de> {
         stmt: &Statement<'de>,
     );
 
-    fn visit_func_expression(
+    fn visit_function_declaration(
         &mut self,
         ast: &mut Ast<'de>,
-        func_expr: &FuncExpr<'de>,
-        expr_id: ExprID,
+        func_decl: &FunctionDeclaration<'de>,
+        item_id: ItemID,
     );
+
     fn visit_break_statement(&mut self, ast: &mut Ast<'de>, break_statement: &BreakStmt<'de>);
     fn visit_error(&mut self, ast: &mut Ast<'de>, span: &TextSpan);
 
@@ -99,9 +103,6 @@ pub trait Visitor<'de> {
             }
             ExprKind::Block(expr) => {
                 self.visit_block_expression(ast, expr, &expression);
-            }
-            ExprKind::Func(func_expr) => {
-                self.visit_func_expression(ast, func_expr, expr_id);
             }
         }
     }

@@ -1,20 +1,25 @@
 use crate::errors::ParserError;
-use ast::ast::{
-    Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch,
-    FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement, StaticTypeAnnotation,
-    UnaryOperator, UnaryOperatorKind,
+use ast::{
+    ast::{
+        Ast, BinaryOperator, BinaryOperatorAssociativity, BinaryOperatorKind, ElseBranch,
+        FuncDeclParameter, FuncReturnTypeSyntax, Item, ItemKind, Statement, StaticTypeAnnotation,
+        UnaryOperator, UnaryOperatorKind,
+    },
+    scopes::GlobalScope,
 };
 use diagnostics::diagnostics::DiagnosticsBagCell;
 use lexer::{Lexer, Token, TokenKind};
 use miette::MietteError;
 use support::counter::Counter;
-use typings::types::{ExprID, StmtID};
+use support::resolver::resolve_type_from_string;
+use typings::types::{ExprID, StmtID, Type};
 
 pub struct Parser<'a, 'de> {
     ast: &'a mut Ast<'de>,
     pub tokens: Vec<Token<'de>>,
     current: Counter,
     pub diagnostics_bag: DiagnosticsBagCell<'de>,
+    global_scope: &'a mut GlobalScope,
 }
 
 impl<'a, 'de> Parser<'a, 'de> {
@@ -22,6 +27,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         tokens: Vec<Token<'de>>,
         diagnostics_bag: DiagnosticsBagCell<'de>,
         ast: &'a mut Ast<'de>,
+        global_scope: &'a mut GlobalScope,
     ) -> Self {
         Self {
             ast,
@@ -34,6 +40,7 @@ impl<'a, 'de> Parser<'a, 'de> {
                 .collect(),
             current: Counter::new(),
             diagnostics_bag,
+            global_scope,
         }
     }
 
@@ -45,6 +52,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         input: &'de str,
         diagnostics_bag: DiagnosticsBagCell<'de>,
         ast: &'a mut Ast<'de>,
+        global_scope: &'a mut GlobalScope,
     ) -> Result<Self, ParserError> {
         let mut lexer = Lexer::new(input);
         let (tokens, errors) = lexer.collect_tokens();
@@ -57,7 +65,7 @@ impl<'a, 'de> Parser<'a, 'de> {
             return Err(ParserError::LexerErrors { errors });
         }
 
-        Ok(Self::new(tokens, diagnostics_bag, ast))
+        Ok(Self::new(tokens, diagnostics_bag, ast, global_scope))
     }
 
     fn peek(&self, offset: isize) -> &Token<'de> {
@@ -106,9 +114,63 @@ impl<'a, 'de> Parser<'a, 'de> {
         self.current().kind == TokenKind::EOF
     }
 
-    fn parse_item(&mut self) -> &Item {
-        let id = self.parse_statement();
-        self.ast.item_from_kind(ItemKind::Stmt(id))
+    fn parse_item(&mut self) -> &Item<'de> {
+        return match self.current().kind {
+            TokenKind::Fun => self.parse_func_item(),
+            _ => {
+                let id = self.parse_statement();
+                self.ast.item_from_kind(ItemKind::Stmt(id))
+            }
+        };
+    }
+
+    fn parse_func_item(&mut self) -> &Item<'de> {
+        let func_keyword = self.consume_and_check(TokenKind::Fun);
+        let identifier = self.consume_and_check(TokenKind::Identifier);
+        let parameters = self.parse_optional_parameter_list();
+        let return_type = self.parse_optional_return_type();
+        let body = self.parse_expression();
+        let decl_parameters = parameters
+            .iter()
+            .map(|param| {
+                let ty = resolve_type_from_string(
+                    &self.diagnostics_bag,
+                    &param.type_annotation.type_name,
+                );
+                self.global_scope
+                    .declare_variable(param.identifier.span.literal, ty, false)
+            })
+            .collect();
+        let decl_return_type = return_type
+            .clone()
+            .map(|return_type| {
+                resolve_type_from_string(&self.diagnostics_bag, &return_type.type_name)
+            })
+            .unwrap_or(Type::Void);
+
+        let created_function_idx_result = self.global_scope.create_function(
+            identifier.span.literal.to_string(),
+            body,
+            decl_parameters,
+            decl_return_type,
+        );
+        let function_idx = match created_function_idx_result {
+            Ok(created_function_idx) => created_function_idx,
+            Err(already_existing_function_idx) => {
+                self.diagnostics_bag
+                    .borrow_mut()
+                    .report_function_already_declared(&identifier);
+                already_existing_function_idx
+            }
+        };
+        self.ast.func_item(
+            func_keyword,
+            identifier,
+            parameters,
+            body,
+            return_type,
+            function_idx,
+        )
     }
 
     fn parse_statement(&mut self) -> StmtID {
@@ -173,12 +235,12 @@ impl<'a, 'de> Parser<'a, 'de> {
             let expr = self.parse_expression();
             return self.ast.assignment_expression(identifier, equals, expr).id;
         }
-        self.parse_binary_expression(0)
+        self.parse_binary_expression()
     }
 
-    fn parse_binary_expression(&mut self, precedence: u8) -> ExprID {
+    fn parse_binary_expression(&mut self) -> ExprID {
         let left = self.parse_unary_expression();
-        self.parse_binary_expression_recurse(left, precedence)
+        self.parse_binary_expression_recurse(left, 0)
     }
 
     fn parse_binary_expression_recurse(&mut self, mut left: ExprID, precedence: u8) -> ExprID {
@@ -221,8 +283,7 @@ impl<'a, 'de> Parser<'a, 'de> {
 
     fn parse_primary_expression(&mut self) -> ExprID {
         let token = self.consume();
-        let expr = match token.kind {
-            TokenKind::Fun => self.parse_func_expression(token),
+        return match token.kind {
             TokenKind::LBrace => self.parse_block_expression(token),
             TokenKind::If => self.parse_if_expression(token),
             TokenKind::Number(number) => self.ast.number_literal_expression(number, token).id,
@@ -234,7 +295,13 @@ impl<'a, 'de> Parser<'a, 'de> {
                     .parenthesized_expression(left_paren, expr, right_paren)
                     .id
             }
-            TokenKind::Identifier => self.ast.identifier_expression(token).id,
+            TokenKind::Identifier => {
+                if matches!(self.current().kind, TokenKind::LParen) {
+                    self.parse_call_expression(token)
+                } else {
+                    self.ast.identifier_expression(token).id
+                }
+            }
             TokenKind::True | TokenKind::False => {
                 let value = token.kind == TokenKind::True;
                 self.ast.boolean_expression(token, value).id
@@ -245,11 +312,6 @@ impl<'a, 'de> Parser<'a, 'de> {
                     .report_expected_expression(&token);
                 self.ast.error_expression(token.span).id
             }
-        };
-
-        return match &self.current().kind {
-            TokenKind::LParen => self.parse_call_expression(expr),
-            _ => expr,
         };
     }
 
@@ -312,15 +374,6 @@ impl<'a, 'de> Parser<'a, 'de> {
         None
     }
 
-    fn parse_func_expression(&mut self, func_keyword: Token<'de>) -> ExprID {
-        let parameters = self.parse_optional_parameter_list();
-        let return_type = self.parse_optional_return_type_annotation();
-        let body = self.parse_expression();
-        self.ast
-            .func_expression(func_keyword, parameters, body, return_type)
-            .id
-    }
-
     fn parse_optional_parameter_list(&mut self) -> Vec<FuncDeclParameter<'de>> {
         if self.current().kind != TokenKind::LParen {
             return Vec::new();
@@ -365,7 +418,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         self.ast.break_statement(break_keyword, label)
     }
 
-    fn parse_call_expression(&mut self, callee: ExprID) -> ExprID {
+    fn parse_call_expression(&mut self, identifier: Token<'de>) -> ExprID {
         let left_paren = self.consume_and_check(TokenKind::LParen);
         let mut arguments = Vec::new();
         while self.current().kind != TokenKind::RParen && !self.is_at_end() {
@@ -376,7 +429,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         }
         let right_paren = self.consume_and_check(TokenKind::RParen);
         self.ast
-            .call_expression(callee, left_paren, right_paren, arguments)
+            .call_expression(identifier, left_paren, right_paren, arguments)
             .id
     }
 
@@ -393,7 +446,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         return StaticTypeAnnotation::new(colon, type_name);
     }
 
-    fn parse_optional_return_type_annotation(&mut self) -> Option<FuncReturnTypeSyntax<'de>> {
+    fn parse_optional_return_type(&mut self) -> Option<FuncReturnTypeSyntax<'de>> {
         if self.current().kind == TokenKind::Arrow {
             let arrow = self.consume_and_check(TokenKind::Arrow);
             let type_name = self.consume_and_check(TokenKind::Identifier);

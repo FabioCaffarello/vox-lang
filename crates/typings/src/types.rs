@@ -11,7 +11,6 @@ idx!(ItemID);
 pub enum Type {
     Float,
     Bool,
-    Function(FunctionIdx),
     Void,
     Unresolved,
     Error,
@@ -20,12 +19,11 @@ pub enum Type {
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter) -> Result {
         let type_name = match self {
-            Self::Float => "float",
-            Self::Bool => "bool",
-            Self::Function(_) => "function",
-            Self::Unresolved => "unresolved",
-            Self::Void => "void",
-            Self::Error => "?",
+            Type::Float => "float",
+            Type::Bool => "bool",
+            Type::Unresolved => "unresolved",
+            Type::Void => "void",
+            Type::Error => "?",
         };
 
         write!(f, "{}", type_name)

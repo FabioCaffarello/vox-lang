@@ -98,10 +98,15 @@ impl<'de> DiagnosticsBag<'de> {
         expected: usize,
         actual: usize,
     ) {
+        let args = if expected == 1 {
+            "argument"
+        } else {
+            "arguments"
+        };
         self.report_error(
             format!(
-                "Function '{}' expects {} arguments, but was given {}",
-                callee_span.literal, expected, actual
+                "Function '{}' expects {} {}, but was given {}",
+                callee_span.literal, expected, args, actual
             ),
             *callee_span,
         );
@@ -110,6 +115,13 @@ impl<'de> DiagnosticsBag<'de> {
     pub fn report_function_already_declared(&mut self, token: &Token<'de>) {
         self.report_error(
             format!("Function '{}' already declared", token.span.literal),
+            token.span,
+        );
+    }
+
+    pub fn report_undeclared_function(&mut self, token: &Token<'de>) {
+        self.report_error(
+            format!("Undeclared function '{}'", token.span.literal),
             token.span,
         );
     }
@@ -156,6 +168,13 @@ impl<'de> DiagnosticsBag<'de> {
     pub fn report_cannot_return_outside_function(&mut self, token: &Token<'de>) {
         self.report_error(
             "Cannot use 'return' outside of function".to_string(),
+            token.span,
+        );
+    }
+
+    pub fn report_cannot_use_rec_outside_of_function(&mut self, token: &Token<'de>) {
+        self.report_error(
+            "Cannot use 'rec' outside of function".to_string(),
             token.span,
         );
     }

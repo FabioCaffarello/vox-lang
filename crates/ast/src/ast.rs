@@ -2,13 +2,13 @@ use crate::{printer::Printer, visitor::Visitor};
 use index::{Idx, IdxVec};
 use lexer::Token;
 use text::span::TextSpan;
-use typings::types::{ExprID, ItemID, StmtID, Type, VariableIdx};
+use typings::types::{ExprID, FunctionIdx, ItemID, StmtID, Type, VariableIdx};
 
 #[derive(Debug, Clone)]
 pub struct Ast<'de> {
     pub statements: IdxVec<StmtID, Statement<'de>>,
     pub expressions: IdxVec<ExprID, Expression<'de>>,
-    pub items: IdxVec<ItemID, Item>,
+    pub items: IdxVec<ItemID, Item<'de>>,
 }
 
 impl<'de> Default for Ast<'de> {
@@ -66,7 +66,7 @@ impl<'de> Ast<'de> {
         expr.ty = ty;
     }
 
-    pub fn query_item(&self, item_id: ItemID) -> &Item {
+    pub fn query_item(&self, item_id: ItemID) -> &Item<'de> {
         &self.items[item_id]
     }
 
@@ -176,24 +176,26 @@ impl<'de> Ast<'de> {
         }))
     }
 
-    pub fn func_expression(
+    pub fn func_item(
         &mut self,
         func_keyword: Token<'de>,
+        identifier: Token<'de>,
         parameters: Vec<FuncDeclParameter<'de>>,
         body: ExprID,
         return_type: Option<FuncReturnTypeSyntax<'de>>,
-    ) -> &Expression<'de> {
-        self.expr_from_kind(ExprKind::Func(FuncExpr {
-            decl: FunctionDeclaration {
-                func_keyword,
-                parameters,
-                body,
-                return_type,
-            },
-        }))
+        function_idx: FunctionIdx,
+    ) -> &Item<'de> {
+        self.item_from_kind(ItemKind::Function(Box::new(FunctionDeclaration {
+            func_keyword,
+            identifier,
+            parameters,
+            body,
+            return_type,
+            function_idx,
+        })))
     }
 
-    pub fn item_from_kind(&mut self, kind: ItemKind) -> &Item {
+    pub fn item_from_kind(&mut self, kind: ItemKind<'de>) -> &Item<'de> {
         let item = Item::new(kind, ItemID::new(0));
         let id = self.items.push(item);
         self.items[id].id = id;
@@ -276,7 +278,7 @@ impl<'de> Ast<'de> {
 
     pub fn call_expression(
         &mut self,
-        callee: ExprID,
+        callee: Token<'de>,
         left_paren: Token<'de>,
         right_paren: Token<'de>,
         arguments: Vec<ExprID>,
@@ -295,20 +297,21 @@ impl<'de> Ast<'de> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Item {
-    pub kind: ItemKind,
+pub struct Item<'de> {
+    pub kind: ItemKind<'de>,
     pub id: ItemID,
 }
 
-impl Item {
-    pub fn new(kind: ItemKind, id: ItemID) -> Self {
+impl<'de> Item<'de> {
+    pub fn new(kind: ItemKind<'de>, id: ItemID) -> Self {
         Self { kind, id }
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum ItemKind {
+pub enum ItemKind<'de> {
     Stmt(StmtID),
+    Function(Box<FunctionDeclaration<'de>>),
 }
 
 #[derive(Debug, Clone)]
@@ -379,7 +382,6 @@ pub enum ExprKind<'de> {
     Call(CallExpr<'de>),
     If(IfExpr<'de>),
     Block(BlockExpr<'de>),
-    Func(FuncExpr<'de>),
 }
 
 #[derive(Debug, Clone)]
@@ -431,7 +433,7 @@ impl<'de> Expression<'de> {
             }
             ExprKind::Boolean(expr) => expr.token.span,
             ExprKind::Call(expr) => {
-                let callee_span = ast.query_expr(expr.callee).span(ast);
+                let callee_span = expr.callee.span;
                 let left_paren = expr.left_paren.span;
                 let right_paren = expr.right_paren.span;
                 let mut spans = vec![callee_span, left_paren, right_paren];
@@ -453,7 +455,6 @@ impl<'de> Expression<'de> {
                 TextSpan::combine(spans)
             }
             ExprKind::Error(span) => *span,
-            ExprKind::Func(expr) => expr.decl.func_keyword.span,
         }
     }
 }
@@ -604,9 +605,11 @@ pub struct BlockExpr<'de> {
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration<'de> {
     pub func_keyword: Token<'de>,
+    pub identifier: Token<'de>,
     pub parameters: Vec<FuncDeclParameter<'de>>,
     pub body: ExprID,
     pub return_type: Option<FuncReturnTypeSyntax<'de>>,
+    pub function_idx: FunctionIdx,
 }
 
 #[derive(Debug, Clone)]
@@ -660,16 +663,17 @@ pub struct BreakStmt<'de> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FuncExpr<'de> {
-    pub decl: FunctionDeclaration<'de>,
-}
-
-#[derive(Debug, Clone)]
 pub struct CallExpr<'de> {
-    pub callee: ExprID,
+    pub callee: Token<'de>,
     pub left_paren: Token<'de>,
     pub right_paren: Token<'de>,
     pub arguments: Vec<ExprID>,
+}
+
+impl<'de> CallExpr<'de> {
+    pub fn function_name(&self) -> &str {
+        self.callee.span.literal
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -12,7 +12,6 @@ use diagnostics::{
 };
 use parser::Parser;
 use text::source::SourceText;
-use typings::types::Type;
 
 #[derive(Debug)]
 pub struct CompilationUnit<'de> {
@@ -26,17 +25,18 @@ impl<'de> CompilationUnit<'de> {
         let source_text = SourceText::new(input.to_string());
         let diagnostics_bag: DiagnosticsBagCell = Rc::new(RefCell::new(DiagnosticsBag::new()));
         let diagnostics_rc = Rc::clone(&diagnostics_bag);
+        let mut global_scope = GlobalScope::new();
 
         let mut ast = Ast::new();
-        let mut parser = Parser::from_input(input, diagnostics_rc.clone(), &mut ast)
-            .map_err(|_| diagnostics_bag.borrow().clone())?;
+        let mut parser =
+            Parser::from_input(input, diagnostics_rc.clone(), &mut ast, &mut global_scope)
+                .map_err(|_| diagnostics_bag.borrow().clone())?;
 
         parser.parse();
         ast.visualize();
         if Self::check_diagnostics(&source_text, &diagnostics_bag).is_err() {
             return Err(diagnostics_bag.borrow().clone());
         }
-        let global_scope = GlobalScope::new();
         let scopes = Scopes::from_global_scope(global_scope);
         let mut resolver = Resolver::new(Rc::clone(&diagnostics_bag), scopes);
         resolver.resolve(&mut ast);
@@ -67,14 +67,9 @@ impl<'de> CompilationUnit<'de> {
 
     pub fn run(&mut self) {
         let mut eval = Evaluator::new(&self.global_scope);
-        let main_function_ref = self.global_scope.lookup_global_variable("main");
+        let main_function_ref = self.global_scope.lookup_function("main");
         if let Some(function) = main_function_ref {
-            let function = self.global_scope.variables.get(function);
-            let function = match &function.ty {
-                Type::Function(function) => function,
-                _ => panic!("Expected function type"),
-            };
-            let function = self.global_scope.functions.get(*function);
+            let function = self.global_scope.functions.get(function);
             eval.visit_expression(&mut self.ast, &function.body);
         } else {
             self.ast.visit(&mut eval);
