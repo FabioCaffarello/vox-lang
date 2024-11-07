@@ -1,12 +1,13 @@
 use crate::ast::{
     AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, BreakStmt, CallExpr, Expression,
-    FunctionDeclaration, LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, Statement, StmtID,
-    UnaryExpr, VariableExpr, WhileStmt,
+    FunctionDeclaration, LetStmt, NumberExpr, ParenthesizedExpr, ReturnStmt, Statement, UnaryExpr,
+    VariableExpr, WhileStmt,
 };
 use crate::visitor::Visitor;
 use crate::{FuncReturnTypeSyntax, IfExpr, StaticTypeAnnotation};
 use termion::color::{self, Fg, Reset};
 use text::span::TextSpan;
+use typings::types::{ItemID, StmtID};
 
 pub struct Printer {
     indent: usize,
@@ -131,7 +132,6 @@ impl<'de> Visitor<'de> for Printer {
         self.add_text(binary_expression.operator.token.span.literal);
         self.add_whitespace();
         self.visit_expression(ast, &binary_expression.right);
-        // self.add_newline();
     }
 
     fn visit_parenthesized_expression(
@@ -192,7 +192,7 @@ impl<'de> Visitor<'de> for Printer {
         }
         self.indent -= 1;
         self.add_padding();
-        self.add_newline();
+        // self.add_newline();
         self.add_text("}");
     }
 
@@ -207,12 +207,13 @@ impl<'de> Visitor<'de> for Printer {
         self.visit_expression(ast, &if_statement.condition);
         self.add_whitespace();
         self.visit_expression(ast, &if_statement.then_branch);
-
+        // self.add_newline();
         if let Some(else_branch) = &if_statement.else_branch {
             self.add_whitespace();
             self.add_keyword("else");
             self.add_whitespace();
             self.visit_expression(ast, &else_branch.expr);
+            // self.add_newline();
         }
     }
 
@@ -234,10 +235,12 @@ impl<'de> Visitor<'de> for Printer {
         &mut self,
         ast: &mut Ast<'de>,
         func_decl: &FunctionDeclaration<'de>,
+        _item_id: ItemID,
     ) {
         self.add_keyword("func");
         self.add_whitespace();
         self.add_text(func_decl.identifier.span.literal);
+        // self.add_whitespace();
         let are_parameters_empty = func_decl.parameters.is_empty();
         if !are_parameters_empty {
             self.add_text("(");
@@ -259,7 +262,7 @@ impl<'de> Visitor<'de> for Printer {
                 self.add_return_type(return_type);
             }
         }
-        self.visit_statement(ast, func_decl.body);
+        self.visit_expression(ast, &func_decl.body);
         self.add_newline();
     }
 
@@ -269,6 +272,7 @@ impl<'de> Visitor<'de> for Printer {
             self.add_whitespace();
             self.visit_expression(ast, expression);
         }
+        self.add_newline();
     }
 
     fn visit_while_statement(&mut self, ast: &mut Ast<'de>, while_statement: &WhileStmt) {
@@ -295,7 +299,7 @@ impl<'de> Visitor<'de> for Printer {
         call_expression: &CallExpr,
         _expr: &Expression<'de>,
     ) {
-        self.add_text(call_expression.identifier.span.literal);
+        self.add_text(call_expression.function_name());
         self.add_text("(");
         for (i, argument) in call_expression.arguments.iter().enumerate() {
             if i != 0 {

@@ -182,6 +182,7 @@ dependencies = [
  "lexer",
  "parser",
  "text",
+ "typings",
 ]
 
 [[package]]
@@ -238,7 +239,7 @@ version = "0.1.0"
 dependencies = [
  "miette",
  "text",
- "thiserror",
+ "thiserror 1.0.67",
 ]
 
 [[package]]
@@ -286,7 +287,7 @@ dependencies = [
  "supports-unicode",
  "terminal_size",
  "textwrap",
- "thiserror",
+ "thiserror 1.0.67",
  "unicode-width",
 ]
 
@@ -340,7 +341,8 @@ dependencies = [
  "lexer",
  "miette",
  "support",
- "thiserror",
+ "thiserror 1.0.67",
+ "typings",
 ]
 
 [[package]]
@@ -410,6 +412,11 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 [[package]]
 name = "support"
 version = "0.1.0"
+dependencies = [
+ "diagnostics",
+ "lexer",
+ "typings",
+]
 
 [[package]]
 name = "supports-color"
@@ -486,7 +493,16 @@ version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b3c6efbfc763e64eb85c11c25320f0737cb7364c4b6336db90aa9ebe27a0bbd"
 dependencies = [
- "thiserror-impl",
+ "thiserror-impl 1.0.67",
+]
+
+[[package]]
+name = "thiserror"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15291287e9bff1bc6f9ff3409ed9af665bec7a5fc8ac079ea96be07bca0e2668"
+dependencies = [
+ "thiserror-impl 2.0.0",
 ]
 
 [[package]]
@@ -501,8 +517,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror-impl"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22efd00f33f93fa62848a7cab956c3d38c8d43095efda1decfc2b3a5dc0b8972"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "typings"
 version = "0.1.0"
+dependencies = [
+ "index",
+]
 
 [[package]]
 name = "unicode-ident"
@@ -543,7 +573,8 @@ dependencies = [
  "parser",
  "termion",
  "text",
- "thiserror",
+ "thiserror 2.0.0",
+ "typings",
 ]
 
 [[package]]

@@ -1,9 +1,10 @@
 use crate::ast::{
-    AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, BreakStmt, CallExpr, ExprID, ExprKind,
-    Expression, FunctionDeclaration, IfExpr, ItemID, ItemKind, LetStmt, NumberExpr,
-    ParenthesizedExpr, ReturnStmt, Statement, StmtID, StmtKind, UnaryExpr, VariableExpr, WhileStmt,
+    AssignmentExpr, Ast, BinaryExpr, BlockExpr, BooleanExpr, BreakStmt, CallExpr, ExprKind,
+    Expression, FunctionDeclaration, IfExpr, ItemKind, LetStmt, NumberExpr, ParenthesizedExpr,
+    ReturnStmt, Statement, StmtKind, UnaryExpr, VariableExpr, WhileStmt,
 };
 use text::span::TextSpan;
+use typings::types::{ExprID, ItemID, StmtID};
 
 pub trait Visitor<'de> {
     fn visit_item(&mut self, ast: &mut Ast<'de>, item: ItemID) {
@@ -13,11 +14,11 @@ pub trait Visitor<'de> {
     fn visit_item_default(&mut self, ast: &mut Ast<'de>, item: ItemID) {
         let item = ast.query_item(item).clone();
         match &item.kind {
-            ItemKind::Func(func_decl) => {
-                self.visit_function_declaration(ast, func_decl);
-            }
             ItemKind::Stmt(stmt) => {
                 self.visit_statement(ast, *stmt);
+            }
+            ItemKind::Function(func_decl) => {
+                self.visit_function_declaration(ast, func_decl, item.id);
             }
         }
     }
@@ -61,7 +62,9 @@ pub trait Visitor<'de> {
         &mut self,
         ast: &mut Ast<'de>,
         func_decl: &FunctionDeclaration<'de>,
+        item_id: ItemID,
     );
+
     fn visit_break_statement(&mut self, ast: &mut Ast<'de>, break_statement: &BreakStmt<'de>);
     fn visit_error(&mut self, ast: &mut Ast<'de>, span: &TextSpan);
 

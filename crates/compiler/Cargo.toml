@@ -7,5 +7,6 @@ edition = "2021"
 ast = { path = "../ast" }
 diagnostics = { path = "../diagnostics" }
 text = { path = "../text" }
+typings = { path = "../typings" }
 lexer = { path = "../lexer" }
 parser = { path = "../parser" }

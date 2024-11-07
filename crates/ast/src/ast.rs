@@ -1,12 +1,8 @@
-use crate::{printer::Printer, scopes::VariableIdx, visitor::Visitor};
-use index::{idx, Idx, IdxVec};
+use crate::{printer::Printer, visitor::Visitor};
+use index::{Idx, IdxVec};
 use lexer::Token;
 use text::span::TextSpan;
-use typings::types::Type;
-
-idx!(StmtID);
-idx!(ExprID);
-idx!(ItemID);
+use typings::types::{ExprID, FunctionIdx, ItemID, StmtID, Type, VariableIdx};
 
 #[derive(Debug, Clone)]
 pub struct Ast<'de> {
@@ -122,7 +118,7 @@ impl<'de> Ast<'de> {
         then: ExprID,
         else_statement: Option<ElseBranch<'de>>,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::If(IfExpr {
+        self.expr_from_kind(ExprKind::If(IfExpr {
             if_keyword,
             condition,
             then_branch: then,
@@ -136,7 +132,7 @@ impl<'de> Ast<'de> {
         statements: Vec<StmtID>,
         right_brace: Token<'de>,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Block(BlockExpr {
+        self.expr_from_kind(ExprKind::Block(BlockExpr {
             left_brace,
             statements,
             right_brace,
@@ -180,19 +176,23 @@ impl<'de> Ast<'de> {
         }))
     }
 
-    pub fn function_declaration(
+    pub fn func_item(
         &mut self,
+        func_keyword: Token<'de>,
         identifier: Token<'de>,
         parameters: Vec<FuncDeclParameter<'de>>,
-        body: StmtID,
+        body: ExprID,
         return_type: Option<FuncReturnTypeSyntax<'de>>,
+        function_idx: FunctionIdx,
     ) -> &Item<'de> {
-        self.item_from_kind(ItemKind::Func(FunctionDeclaration {
+        self.item_from_kind(ItemKind::Function(Box::new(FunctionDeclaration {
+            func_keyword,
             identifier,
             parameters,
             body,
             return_type,
-        }))
+            function_idx,
+        })))
     }
 
     pub fn item_from_kind(&mut self, kind: ItemKind<'de>) -> &Item<'de> {
@@ -202,7 +202,7 @@ impl<'de> Ast<'de> {
         &self.items[id]
     }
 
-    pub fn expression_from_kind(&mut self, kind: ExprKind<'de>) -> &Expression<'de> {
+    pub fn expr_from_kind(&mut self, kind: ExprKind<'de>) -> &Expression<'de> {
         let expr = Expression::new(kind, ExprID::new(0), Type::Unresolved);
         let id = self.expressions.push(expr);
         self.expressions[id].id = id;
@@ -214,7 +214,7 @@ impl<'de> Ast<'de> {
         number: f64,
         token: Token<'de>,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Number(NumberExpr { number, token }))
+        self.expr_from_kind(ExprKind::Number(NumberExpr { number, token }))
     }
 
     pub fn binary_expression(
@@ -223,7 +223,7 @@ impl<'de> Ast<'de> {
         operator: BinaryOperator<'de>,
         right: ExprID,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Binary(BinaryExpr {
+        self.expr_from_kind(ExprKind::Binary(BinaryExpr {
             left,
             operator,
             right,
@@ -235,7 +235,7 @@ impl<'de> Ast<'de> {
         operator: UnaryOperator<'de>,
         operand: ExprID,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Unary(UnaryExpr { operator, operand }))
+        self.expr_from_kind(ExprKind::Unary(UnaryExpr { operator, operand }))
     }
 
     pub fn parenthesized_expression(
@@ -244,7 +244,7 @@ impl<'de> Ast<'de> {
         expression: ExprID,
         right_paren: Token<'de>,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Parenthesized(ParenthesizedExpr {
+        self.expr_from_kind(ExprKind::Parenthesized(ParenthesizedExpr {
             expression,
             left_paren,
             right_paren,
@@ -252,7 +252,7 @@ impl<'de> Ast<'de> {
     }
 
     pub fn identifier_expression(&mut self, identifier: Token<'de>) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Variable(VariableExpr {
+        self.expr_from_kind(ExprKind::Variable(VariableExpr {
             identifier,
             variable_idx: VariableIdx::new(0),
         }))
@@ -264,7 +264,7 @@ impl<'de> Ast<'de> {
         equals: Token<'de>,
         expression: ExprID,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Assignment(AssignmentExpr {
+        self.expr_from_kind(ExprKind::Assignment(AssignmentExpr {
             identifier,
             equals,
             expression,
@@ -273,18 +273,18 @@ impl<'de> Ast<'de> {
     }
 
     pub fn boolean_expression(&mut self, token: Token<'de>, value: bool) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Boolean(BooleanExpr { token, value }))
+        self.expr_from_kind(ExprKind::Boolean(BooleanExpr { token, value }))
     }
 
     pub fn call_expression(
         &mut self,
-        identifier: Token<'de>,
+        callee: Token<'de>,
         left_paren: Token<'de>,
         right_paren: Token<'de>,
         arguments: Vec<ExprID>,
     ) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Call(CallExpr {
-            identifier,
+        self.expr_from_kind(ExprKind::Call(CallExpr {
+            callee,
             left_paren,
             right_paren,
             arguments,
@@ -292,7 +292,7 @@ impl<'de> Ast<'de> {
     }
 
     pub fn error_expression(&mut self, span: TextSpan<'de>) -> &Expression<'de> {
-        self.expression_from_kind(ExprKind::Error(span))
+        self.expr_from_kind(ExprKind::Error(span))
     }
 }
 
@@ -310,8 +310,8 @@ impl<'de> Item<'de> {
 
 #[derive(Debug, Clone)]
 pub enum ItemKind<'de> {
-    Func(FunctionDeclaration<'de>),
     Stmt(StmtID),
+    Function(Box<FunctionDeclaration<'de>>),
 }
 
 #[derive(Debug, Clone)]
@@ -433,10 +433,10 @@ impl<'de> Expression<'de> {
             }
             ExprKind::Boolean(expr) => expr.token.span,
             ExprKind::Call(expr) => {
-                let identifier = expr.identifier.span;
+                let callee_span = expr.callee.span;
                 let left_paren = expr.left_paren.span;
                 let right_paren = expr.right_paren.span;
-                let mut spans = vec![identifier, left_paren, right_paren];
+                let mut spans = vec![callee_span, left_paren, right_paren];
                 for arg in &expr.arguments {
                     spans.push(ast.query_expr(*arg).span(ast));
                 }
@@ -604,10 +604,12 @@ pub struct BlockExpr<'de> {
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration<'de> {
+    pub func_keyword: Token<'de>,
     pub identifier: Token<'de>,
     pub parameters: Vec<FuncDeclParameter<'de>>,
-    pub body: StmtID,
+    pub body: ExprID,
     pub return_type: Option<FuncReturnTypeSyntax<'de>>,
+    pub function_idx: FunctionIdx,
 }
 
 #[derive(Debug, Clone)]
@@ -662,10 +664,16 @@ pub struct BreakStmt<'de> {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr<'de> {
-    pub identifier: Token<'de>,
+    pub callee: Token<'de>,
     pub left_paren: Token<'de>,
     pub right_paren: Token<'de>,
     pub arguments: Vec<ExprID>,
+}
+
+impl<'de> CallExpr<'de> {
+    pub fn function_name(&self) -> &str {
+        self.callee.span.literal
+    }
 }
 
 #[derive(Debug, Clone)]

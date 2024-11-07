@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use crate::scopes::{GlobalScope, VariableIdx};
+use crate::scopes::GlobalScope;
 use crate::visitor::Visitor;
 use crate::{
     ast::{
@@ -10,10 +8,13 @@ use crate::{
     },
     loops::Loops,
 };
+use std::collections::HashMap;
 use text::span::TextSpan;
+use typings::types::{FunctionIdx, ItemID, VariableIdx};
 
+#[derive(Debug)]
 pub struct Frame {
-    variables: HashMap<VariableIdx, f64>,
+    variables: HashMap<VariableIdx, Value>,
 }
 
 impl Frame {
@@ -23,14 +24,16 @@ impl Frame {
         }
     }
 
-    fn insert(&mut self, idx: VariableIdx, value: f64) {
+    fn insert(&mut self, idx: VariableIdx, value: Value) {
         self.variables.insert(idx, value);
     }
 
-    fn get(&self, idx: &VariableIdx) -> Option<&f64> {
+    fn get(&self, idx: &VariableIdx) -> Option<&Value> {
         self.variables.get(idx)
     }
 }
+
+#[derive(Debug)]
 pub struct Frames {
     frames: Vec<Frame>,
 }
@@ -49,20 +52,20 @@ impl Frames {
         self.frames.pop();
     }
 
-    fn update(&mut self, idx: VariableIdx, value: f64) {
+    fn update(&mut self, idx: VariableIdx, value: Value) {
         for frame in self.frames.iter_mut().rev() {
-            if frame.variables.contains_key(&idx) {
+            if frame.get(&idx).is_some() {
                 frame.insert(idx, value);
                 return;
             }
         }
     }
 
-    fn insert(&mut self, idx: VariableIdx, value: f64) {
+    fn insert(&mut self, idx: VariableIdx, value: Value) {
         self.frames.last_mut().unwrap().insert(idx, value);
     }
 
-    fn get(&self, idx: &VariableIdx) -> Option<&f64> {
+    fn get(&self, idx: &VariableIdx) -> Option<&Value> {
         for frame in self.frames.iter().rev() {
             if let Some(value) = frame.get(idx) {
                 return Some(value);
@@ -72,8 +75,39 @@ impl Frames {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Value {
+    Number(f64),
+    Boolean(bool),
+    Function(FunctionIdx),
+}
+
+impl Value {
+    pub fn expect_boolean(&self) -> bool {
+        match self {
+            Value::Boolean(value) => *value,
+            _ => panic!("Expected boolean value"),
+        }
+    }
+
+    pub fn expect_number(&self) -> f64 {
+        match self {
+            Value::Number(value) => *value,
+            _ => panic!("Expected number value"),
+        }
+    }
+
+    pub fn expect_function(&self) -> FunctionIdx {
+        match self {
+            Value::Function(value) => *value,
+            _ => panic!("Expected function value"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Evaluator<'a> {
-    pub last_value: Option<f64>,
+    pub last_value: Option<Value>,
     pub frames: Frames,
     pub global_scope: &'a GlobalScope,
     should_break: bool,
@@ -91,24 +125,19 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn eval_boolean_instruction<F>(&self, instruction: F) -> f64
-    where
-        F: FnOnce() -> bool,
-    {
-        let result = instruction();
-        if result {
-            1_f64
-        } else {
-            0_f64
-        }
-    }
-
     fn push_frame(&mut self) {
         self.frames.push();
     }
 
     fn pop_frame(&mut self) {
         self.frames.pop();
+    }
+
+    fn expect_last_value(&self) -> Value {
+        *self
+            .last_value
+            .as_ref()
+            .expect("Expected last value to be set")
     }
 }
 
@@ -121,7 +150,7 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
     ) {
         self.visit_expression(ast, &let_statement.initializer);
         self.frames
-            .insert(let_statement.variable_idx, self.last_value.unwrap());
+            .insert(let_statement.variable_idx, self.expect_last_value());
     }
 
     fn visit_variable_expression(
@@ -135,7 +164,9 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
             *self
                 .frames
                 .get(&variable_expression.variable_idx)
-                .unwrap_or_else(|| panic!("Variable {} not found", identifier)),
+                .unwrap_or_else(|| {
+                    panic!("Variable '{}' not found", identifier);
+                }),
         );
     }
 
@@ -145,7 +176,7 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         number: &NumberExpr,
         _expr: &Expression<'de>,
     ) {
-        self.last_value = Some(number.number);
+        self.last_value = Some(Value::Number(number.number));
     }
 
     fn visit_unary_expression(
@@ -155,10 +186,10 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         _expr: &Expression<'de>,
     ) {
         self.visit_expression(ast, &unary_expr.operand);
-        let operand = self.last_value.unwrap();
-        self.last_value = Some(match unary_expr.operator.kind {
+        let operand = self.expect_last_value().expect_number();
+        self.last_value = Some(Value::Number(match unary_expr.operator.kind {
             UnaryOperatorKind::Minus => -operand,
-        });
+        }));
     }
 
     fn visit_binary_expression(
@@ -168,28 +199,36 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         _expr: &Expression<'de>,
     ) {
         self.visit_expression(ast, &binary_expr.left);
-        let left = self.last_value.unwrap();
+        let left = self.expect_last_value();
         self.visit_expression(ast, &binary_expr.right);
-        let right = self.last_value.unwrap();
+        let right = self.expect_last_value();
         self.last_value = Some(match binary_expr.operator.kind {
-            BinaryOperatorKind::Plus => left + right,
-            BinaryOperatorKind::Subtract => left - right,
-            BinaryOperatorKind::Multiply => left * right,
-            BinaryOperatorKind::Divide => left / right,
-            BinaryOperatorKind::Power => left.powf(right),
-            BinaryOperatorKind::Equals => {
-                if left == right {
-                    1_f64
-                } else {
-                    0_f64
-                }
+            BinaryOperatorKind::Plus => Value::Number(left.expect_number() + right.expect_number()),
+            BinaryOperatorKind::Subtract => {
+                Value::Number(left.expect_number() - right.expect_number())
             }
-            BinaryOperatorKind::NotEquals => self.eval_boolean_instruction(|| left != right),
-            BinaryOperatorKind::LessThan => self.eval_boolean_instruction(|| left < right),
-            BinaryOperatorKind::LessThanOrEqual => self.eval_boolean_instruction(|| left <= right),
-            BinaryOperatorKind::GreaterThan => self.eval_boolean_instruction(|| left > right),
+            BinaryOperatorKind::Multiply => {
+                Value::Number(left.expect_number() * right.expect_number())
+            }
+            BinaryOperatorKind::Divide => {
+                Value::Number(left.expect_number() / right.expect_number())
+            }
+            BinaryOperatorKind::Power => {
+                Value::Number(left.expect_number().powf(right.expect_number()))
+            }
+            BinaryOperatorKind::Equals => Value::Boolean(left == right),
+            BinaryOperatorKind::NotEquals => Value::Boolean(left != right),
+            BinaryOperatorKind::LessThan => {
+                Value::Boolean(left.expect_number() < right.expect_number())
+            }
+            BinaryOperatorKind::LessThanOrEqual => {
+                Value::Boolean(left.expect_number() <= right.expect_number())
+            }
+            BinaryOperatorKind::GreaterThan => {
+                Value::Boolean(left.expect_number() > right.expect_number())
+            }
             BinaryOperatorKind::GreaterThanOrEqual => {
-                self.eval_boolean_instruction(|| left >= right)
+                Value::Boolean(left.expect_number() >= right.expect_number())
             }
         });
     }
@@ -224,7 +263,7 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
     ) {
         self.push_frame();
         self.visit_expression(ast, &if_statement.condition);
-        if self.last_value.unwrap() != 0 as f64 {
+        if self.expect_last_value().expect_boolean() {
             self.push_frame();
             self.visit_expression(ast, &if_statement.then_branch);
             self.pop_frame();
@@ -250,7 +289,8 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
     fn visit_function_declaration(
         &mut self,
         _ast: &mut Ast<'de>,
-        _func_decl: &FunctionDeclaration,
+        _func_decl: &FunctionDeclaration<'de>,
+        _item_id: ItemID,
     ) {
     }
 
@@ -269,15 +309,14 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         }
         self.push_frame();
         self.visit_expression(ast, &while_statement.condition);
-
-        while self.last_value.unwrap() != 0_f64 {
+        while self.expect_last_value().expect_boolean() {
             self.visit_expression(ast, &while_statement.body);
-            self.visit_expression(ast, &while_statement.condition);
             if self.should_break {
                 self.should_break = false;
                 self.loops.pop();
                 break;
             }
+            self.visit_expression(ast, &while_statement.condition);
         }
 
         self.pop_frame();
@@ -289,16 +328,12 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         call_expression: &CallExpr<'de>,
         _expr: &Expression<'de>,
     ) {
-        let function_idx = self
+        let function_name = call_expression.function_name();
+        let function = self
             .global_scope
-            .lookup_function(call_expression.identifier.span.literal)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Function {} not found",
-                    call_expression.identifier.span.literal
-                )
-            });
-        let function = self.global_scope.functions.get(function_idx);
+            .lookup_function(function_name)
+            .map(|f| self.global_scope.functions.get(f))
+            .unwrap_or_else(|| panic!("Function '{}' not found", function_name));
         let mut arguments = Vec::new();
         for argument in &call_expression.arguments {
             self.visit_expression(ast, argument);
@@ -309,7 +344,7 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
             self.frames.insert(*param, *argument);
         }
 
-        self.visit_statement(ast, function.body);
+        self.visit_expression(ast, &function.body);
         self.pop_frame();
     }
 
@@ -319,7 +354,7 @@ impl<'a, 'de> Visitor<'de> for Evaluator<'a> {
         boolean: &BooleanExpr,
         _expr: &Expression<'de>,
     ) {
-        self.last_value = Some(boolean.value as i64 as f64);
+        self.last_value = Some(Value::Boolean(boolean.value));
     }
 
     fn visit_error(&mut self, _ast: &mut Ast<'de>, _span: &TextSpan) {
