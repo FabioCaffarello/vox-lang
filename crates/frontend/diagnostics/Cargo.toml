@@ -1,0 +1,11 @@
+[package]
+name = "diagnostics"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+text = { path = "../../utils/text" }
+token = { path = "../token" }
+typings = { path = "../typings" }
+termion = "4.0.3"
+

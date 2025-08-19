@@ -3,6 +3,10 @@ RUST_TOOLCHAIN=stable
 
 .PHONY: rust-version format lint test all
 
+setup:
+	rustup toolchain install nightly
+	rustup component add rustfmt --toolchain nightly
+
 # Display versions of all Rust tools
 rust-version:
 	@echo "Rust command-line utility versions:"

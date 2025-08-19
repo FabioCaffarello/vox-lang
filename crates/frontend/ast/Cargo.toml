@@ -1,0 +1,13 @@
+[package]
+name = "ast"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+index = { path = "../../utils/index" }
+text = { path = "../../utils/text" }
+diagnostics = { path = "../diagnostics" }
+resolver = { path = "../resolver" }
+token = { path = "../token" }
+typings = { path = "../typings" }
+termion = "4.0.3"
