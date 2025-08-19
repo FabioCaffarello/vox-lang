@@ -1,0 +1,15 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+errors = { path = "../../utils/errors" }
+counter = { path = "../../utils/counter" }
+ast = { path = "../ast" }
+diagnostics = { path = "../diagnostics" }
+lexer = { path = "../lexer" }
+token = { path = "../token" }
+resolver = { path = "../resolver" }
+typings = { path = "../typings" }
+miette = { version = "7.2.0", features = ["fancy"] }
