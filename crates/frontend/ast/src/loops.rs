@@ -34,7 +34,7 @@ impl Loops {
     pub fn find_label(&self, label: &str) -> Option<usize> {
         self.loop_stack.iter().rposition(|lbl| {
             lbl.as_ref()
-                .map_or(false, |existing_label| existing_label == label)
+                .is_some_and(|existing_label| existing_label == label)
         })
     }
 

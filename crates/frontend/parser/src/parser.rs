@@ -61,7 +61,7 @@ impl<'a, 'de> Parser<'a, 'de> {
         if !errors.is_empty() {
             let errors: Vec<MietteError> = errors
                 .into_iter()
-                .map(|e| MietteError::from(std::io::Error::new(std::io::ErrorKind::Other, e)))
+                .map(|e| MietteError::from(std::io::Error::other(e)))
                 .collect();
             return Err(ParserError::LexerErrors { errors });
         }
@@ -104,11 +104,11 @@ impl<'a, 'de> Parser<'a, 'de> {
         }
     }
 
-    fn next_item(&mut self) -> Option<&Item> {
+    fn next_item(&mut self) -> Option<&Item<'de>> {
         if self.is_at_end() {
             return None;
         }
-        return Some(self.parse_item());
+        Some(self.parse_item())
     }
 
     fn is_at_end(&self) -> bool {
@@ -116,13 +116,13 @@ impl<'a, 'de> Parser<'a, 'de> {
     }
 
     fn parse_item(&mut self) -> &Item<'de> {
-        return match self.current().kind {
+        match self.current().kind {
             TokenKind::Fun => self.parse_func_item(),
             _ => {
                 let id = self.parse_statement();
                 self.ast.item_from_kind(ItemKind::Stmt(id))
             }
-        };
+        }
     }
 
     fn parse_func_item(&mut self) -> &Item<'de> {
@@ -284,7 +284,7 @@ impl<'a, 'de> Parser<'a, 'de> {
 
     fn parse_primary_expression(&mut self) -> ExprID {
         let token = self.consume();
-        return match token.kind {
+        match token.kind {
             TokenKind::LBrace => self.parse_block_expression(token),
             TokenKind::If => self.parse_if_expression(token),
             TokenKind::Number(number) => self.ast.number_literal_expression(number, token).id,
@@ -313,7 +313,7 @@ impl<'a, 'de> Parser<'a, 'de> {
                     .report_expected_expression(&token);
                 self.ast.error_expression(token.span).id
             }
-        };
+        }
     }
 
     fn parse_unary_operator(&mut self) -> Option<UnaryOperator<'de>> {
@@ -323,7 +323,7 @@ impl<'a, 'de> Parser<'a, 'de> {
             _ => None,
         };
 
-        return kind.map(|kind| UnaryOperator::new(kind, token));
+        kind.map(|kind| UnaryOperator::new(kind, token))
     }
 
     fn parse_binary_operator(&mut self) -> Option<BinaryOperator<'de>> {
@@ -343,7 +343,7 @@ impl<'a, 'de> Parser<'a, 'de> {
             _ => None,
         };
 
-        return kind.map(|kind| BinaryOperator::new(kind, token));
+        kind.map(|kind| BinaryOperator::new(kind, token))
     }
 
     fn parse_block_expression(&mut self, left_brace: Token<'de>) -> ExprID {
@@ -444,7 +444,7 @@ impl<'a, 'de> Parser<'a, 'de> {
     fn parse_type_annotation(&mut self) -> StaticTypeAnnotation<'de> {
         let colon = self.consume_and_check(TokenKind::Colon);
         let type_name = self.consume_and_check(TokenKind::Identifier);
-        return StaticTypeAnnotation::new(colon, type_name);
+        StaticTypeAnnotation::new(colon, type_name)
     }
 
     fn parse_optional_return_type(&mut self) -> Option<FuncReturnTypeSyntax<'de>> {

@@ -6,8 +6,8 @@ use token::TokenKind;
 use std::{cell::RefCell, rc::Rc};
 
 fn mk_components<'de>() -> (Ast<'de>, GlobalScope, DiagnosticsBagCell<'de>) {
-    let ast: Ast<'de> = Ast::default(); 
-    let global: GlobalScope = GlobalScope::default(); 
+    let ast: Ast<'de> = Ast::default();
+    let global: GlobalScope = GlobalScope::default();
     let bag: DiagnosticsBagCell<'de> = Rc::new(RefCell::new(DiagnosticsBag::new()));
     (ast, global, bag)
 }
@@ -112,18 +112,23 @@ fn parse_return_statement() {
 #[test]
 fn parse_function_item_with_params_and_return() {
     let (_ast, _global, bag) = parse_input("fun add(a: int, b: int) -> int a + b");
-    let msgs: Vec<String> = bag.borrow().diagnostics.iter().map(|d| d.message.clone()).collect();
+    let msgs: Vec<String> = bag
+        .borrow()
+        .diagnostics
+        .iter()
+        .map(|d| d.message.clone())
+        .collect();
 
     let diags = &bag.borrow().diagnostics;
-    let ok = msgs.is_empty() || msgs.iter().all(|m|
-        m.contains("Undeclared type 'int'")
-        || m.contains("Unexpected token")
-        || m.contains("Expected expression")
-    );
+    let ok = msgs.is_empty()
+        || msgs.iter().all(|m| {
+            m.contains("Undeclared type 'int'")
+                || m.contains("Unexpected token")
+                || m.contains("Expected expression")
+        });
 
     assert!(ok, "unexpected diagnostics: {:?}", msgs);
 }
-
 
 #[test]
 fn unexpected_label_on_non_while_reports_diagnostic() {
@@ -212,7 +217,12 @@ fn bare_semicolon_reports_expected_expression() {
         !bag.borrow().diagnostics.is_empty(),
         "expected a diagnostic for bare semicolon"
     );
-    let msgs: Vec<String> = bag.borrow().diagnostics.iter().map(|d| d.message.clone()).collect();
+    let msgs: Vec<String> = bag
+        .borrow()
+        .diagnostics
+        .iter()
+        .map(|d| d.message.clone())
+        .collect();
     assert!(
         msgs.iter().any(|m| m.contains("Expected expression")),
         "expected 'Expected expression' in diagnostics, got: {:?}",

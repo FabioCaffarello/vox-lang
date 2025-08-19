@@ -421,6 +421,6 @@ impl<'de> Iterator for Lexer<'de> {
         }
 
         // Handle unrecognized tokens
-        return self.just(TokenKind::Bad, start, end);
+        self.just(TokenKind::Bad, start, end)
     }
 }
